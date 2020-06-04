@@ -105,6 +105,7 @@ MODULE_OBJS += \
 	plugins/elf/memory-manager.o \
 	plugins/elf/mips-loader.o \
 	plugins/elf/ppc-loader.o \
+	plugins/elf/sh-loader.o \
 	plugins/elf/shorts-segment-manager.o \
 	plugins/elf/version.o
 endif
@@ -284,6 +285,18 @@ MODULE_OBJS += \
 	events/gph/gph-events.o \
 	graphics/gph/gph-graphics.o \
 	graphics/downscalesdl/downscalesdl-graphics.o
+endif
+
+ifeq ($(BACKEND),dcalt)
+MODULE_OBJS += \
+	fs/posix/posix-fs.o \
+	fs/posix/posix-fs-factory.o \
+	fs/posix/posix-iostream.o \
+	plugins/dcalt/dcalt-provider.o
+ifdef USE_AICA
+MODULE_OBJS += \
+        midi/aica.o
+endif
 endif
 
 ifeq ($(BACKEND),maemo)

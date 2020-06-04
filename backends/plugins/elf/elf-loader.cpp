@@ -129,6 +129,9 @@ bool DLObject::readElfHeader(Elf32_Ehdr *ehdr) {
 #ifdef PPC_TARGET
 			EM_PPC
 #endif
+#ifdef SH_TARGET
+			EM_SH
+#endif
 			) {
 		warning("elfloader: Wrong ELF file architecture.");
 		return false;

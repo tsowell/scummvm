@@ -77,10 +77,22 @@ extern int pluginTypeVersions[PLUGIN_TYPE_MAX];
 
 // Plugin linking
 
+/**
+ * The ELF loader expects certain symbols to be present in a plugin
+ * (__dso_handle, getBuildDate, etc.), but on SH targets symbol names get
+ * underscores prepended to them.  We need to explicitly provide any names that
+ * we care about elsewhere.
+ **/
+#ifdef __DCALT__
+#define PLUGIN_SYMBOL_NAME(x) asm(#x)
+#else
+#define PLUGIN_SYMBOL_NAME(x)
+#endif
+
 // see comments in backends/plugins/elf/elf-provider.cpp
 #if defined(USE_ELF_LOADER) && defined(ELF_LOADER_CXA_ATEXIT)
 #define PLUGIN_DYNAMIC_DSO_HANDLE \
-	uint32 __dso_handle __attribute__((visibility("hidden"))) = 0;
+	uint32 __dso_handle PLUGIN_SYMBOL_NAME("__dso_handle") __attribute__((visibility("hidden"))) = 0;
 #else
 #define PLUGIN_DYNAMIC_DSO_HANDLE
 #endif
@@ -121,6 +133,16 @@ extern int pluginTypeVersions[PLUGIN_TYPE_MAX];
  */
 #define REGISTER_PLUGIN_DYNAMIC(ID,TYPE,PLUGINCLASS) \
 	extern "C" { \
+		PLUGIN_EXPORT const char *PLUGIN_getBuildDate() \
+		    PLUGIN_SYMBOL_NAME("PLUGIN_getBuildDate"); \
+		PLUGIN_EXPORT int32 PLUGIN_getVersion() \
+		    PLUGIN_SYMBOL_NAME("PLUGIN_getVersion"); \
+		PLUGIN_EXPORT int32 PLUGIN_getType() \
+		    PLUGIN_SYMBOL_NAME("PLUGIN_getType"); \
+		PLUGIN_EXPORT int32 PLUGIN_getTypeVersion() \
+		    PLUGIN_SYMBOL_NAME("PLUGIN_getTypeVersion"); \
+		PLUGIN_EXPORT PluginObject *PLUGIN_getObject() \
+		    PLUGIN_SYMBOL_NAME("PLUGIN_getObject"); \
 		PLUGIN_DYNAMIC_DSO_HANDLE \
 		PLUGIN_DYNAMIC_BUILD_DATE \
 		PLUGIN_EXPORT int32 PLUGIN_getVersion() { return PLUGIN_VERSION; } \

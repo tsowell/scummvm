@@ -447,6 +447,10 @@
 	#endif
 #endif
 
+#if defined(__DCALT__) && defined(SCUMMVM_DONT_DEFINE_TYPES)
+	typedef unsigned char byte;
+#endif
+
 //
 // Determine 64 bitness
 // Reference: http://nadeausoftware.com/articles/2012/02/c_c_tip_how_detect_processor_type_using_compiler_predefined_macros

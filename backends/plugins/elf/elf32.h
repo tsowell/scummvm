@@ -244,6 +244,10 @@ typedef struct {
 #define R_PPC_REL24			10
 #define R_PPC_REL32			26
 
+// SH relocation types
+#define R_SH_NONE               0
+#define R_SH_DIR32              1
+
 #endif // defined(DYNAMIC_MODULES) && defined(USE_ELF_LOADER)
 
 #endif /* BACKENDS_ELF_H */

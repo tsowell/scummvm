@@ -140,6 +140,9 @@ public:
 		#if defined(USE_TIMIDITY)
 		LINK_PLUGIN(TIMIDITY)
 		#endif
+		#if defined(USE_AICA)
+		LINK_PLUGIN(AICA)
+		#endif
 		#if defined(MACOSX)
 		// Keep this at the end of the list - it takes a long time to enumerate
 		// and is only for hardware midi devices
