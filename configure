@@ -3736,6 +3736,8 @@ case $_backend in
 	dcalt)
 		append_var DEFINES "-D__DCALT__"
 		append_var DEFINES "-DSCUMMVM_DONT_DEFINE_TYPES"
+                append_var FLAC_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include"
+                append_var FLAC_LIBS "${KOS_LIBS}"
 		append_var MAD_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include/mad"
 		append_var MAD_LIBS "${KOS_LIBS}"
 		append_var ZLIB_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include/zlib"
