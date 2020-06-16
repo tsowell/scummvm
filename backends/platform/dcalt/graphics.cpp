@@ -603,7 +603,7 @@ void Mouse::changeFormat(uint w, uint h,
 	}
 
 	// align stride to 32 bytes
-	if (_w & 0x1F)
+	if (_texture_w & 0x1F)
 		_texture_w = (_texture_w & ~0x1F) + 32;
 
 	_pixels = (uint8_t *)memalign(32, _texture_w * _texture_h);
