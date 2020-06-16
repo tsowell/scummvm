@@ -35,7 +35,7 @@ OSystem::MutexRef DCAltMutexManager::createMutex()
 		return NULL;
 	}
 
-	ret = mutex_init(mutex, MUTEX_TYPE_NORMAL);
+	ret = mutex_init(mutex, MUTEX_TYPE_RECURSIVE);
 	if (ret != 0) {
 		perror("mutex_init");
 		return NULL;
