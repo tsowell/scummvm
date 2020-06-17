@@ -40,7 +40,7 @@ to use "mkfs.vfat -f 1" when creating a FAT filesystem for use with it.
 
 ## Usage
 
-### Notes on CD mastering
+### Notes on burning a CD
 
 When you add a game through ScummVM's launcher, it has to load plugins
 one-at-a-time to find one that will work with the game.  If you're loading the
@@ -151,18 +151,18 @@ been modified to force the RAMDAC vsync negative.  This is useful for driving
 older monitors that depend on sync polarity to determine video resolution.
 
 
-## Building
+## Building from source
 
 ### Get the KallistiOS source
 
 The backend should mostly work with the KallistiOS upstream, but the fork below
 adds AICA MIDI out support and has a few small fixes.
 
-    $ git clone "https://github.com/tsowell/KallistiOS-scummvm"
-    $ git clone "https://github.com/KallistiOS/kos-ports"
+    $ git clone "https://github.com/tsowell/KallistiOS-scummvm" KallistiOS
+    $ git clone "https://github.com/tsowell/kos-ports-scummvm" kos-ports
 
-From here on out, the cloned KallistiOS-scummvm repository will be referred to
-as $KALLISTIOS.
+From here on out, the cloned KallistiOS repository will be referred to as
+$KALLISTIOS.
 
 ### Build the toolchain
 
@@ -184,10 +184,9 @@ different path.  You may also want to configure the makejobs variable.
 
 Make these changes in environ.sh:
 
-* Set KOS_BASE to the KallistiOS-scummvm source path
+* Set KOS_BASE to the KallistiOS source path
 * Set KOS_CC_BASE to match sh_prefix in utils/dc-chain/Makefile
 * Set KOS_ARM_BASE to match arm_prefix in utils/dc-chain/Makefile
-* Add ${KOS_ARM_BASE}/bin to PATH
 
 ### Build KallistiOS
 
@@ -200,6 +199,13 @@ Make these changes in environ.sh:
     $ cd $KALLISTIOS
     $ . environ.sh
     $ cd ../kos-ports/zlib
+    $ make install
+
+### Build FLAC
+
+    $ cd $KALLISTIOS
+    $ . environ.sh
+    $ cd ../kos-ports/flac
     $ make install
 
 ### Build makeip
