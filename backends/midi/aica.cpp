@@ -113,7 +113,7 @@ void MidiDriver_AICA::sysEx(const byte *msg, uint16 length) {
 class AicaMusicPlugin : public MusicPluginObject {
 public:
 	const char *getName() const {
-		return "AICA";
+		return "Dreamcast AICA";
 	}
 
 	const char *getId() const {
