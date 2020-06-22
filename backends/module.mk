@@ -293,6 +293,7 @@ MODULE_OBJS += \
 	fs/posix/posix-fs-factory.o \
 	fs/posix/posix-iostream.o \
         midi/aica.o \
+        midi/dcmic.o \
 	plugins/dcalt/dcalt-provider.o
 endif
 

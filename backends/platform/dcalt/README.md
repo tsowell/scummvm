@@ -25,9 +25,10 @@ It also supports some additional hardware and modifications:
     configuration and save files.
   * scummvm.ini and saved games can be written to VMU, SD card, or ATA drive
     (see "Saved games" and "scummvm.ini paths" below).
-  * It can output MIDI over the AICA MIDI out port so an external synth, like
-    an MT-32, can be used.  The AICA MIDI signals are available on the G2 port,
-    so a MIDI connector can be added to a Dreamcast modem.
+  * It can output MIDI over a Dreamcast MIDI Interface Cable or the AICA MIDI
+    out port so an external synth, like an MT-32, can be used.  The AICA MIDI
+    signals are available on the G2 port, so a MIDI connector can be added to a
+    Dreamcast modem.
   * It can change VGA modes to output a 320x200 image so that the display can
     handle the vertical scaling.  (see the "VGA options" section below).
 

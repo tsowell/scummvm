@@ -142,6 +142,7 @@ public:
 		#endif
 		#if defined(__DCALT__)
 		LINK_PLUGIN(AICA)
+		LINK_PLUGIN(DCMIC)
 		#endif
 		#if defined(MACOSX)
 		// Keep this at the end of the list - it takes a long time to enumerate
