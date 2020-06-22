@@ -25,7 +25,7 @@
 
 #include "common/scummsys.h"
 
-#if defined(__DCALT__) && defined(USE_AICA)
+#if defined(__DCALT__)
 
 #include <dc/sound/sound.h>
 #include <dc/sound/midi.h>

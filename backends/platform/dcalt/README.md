@@ -226,7 +226,7 @@ variable in backends/platform/dcalt/dcalt.mk.
     $ cd scummvm-dreamcast
     $ . $KALLISTIOS/environ.sh
     $ ./configure --backend=dcalt --host=dreamcast-alt --enable-plugins \
-       --default-dynamic --disable-mt32emu --enable-aica
+       --default-dynamic --disable-mt32emu
     $ make dcalt-dist
 
 This produces CD files in dcalt-dist/cd and IP.BIN in dcalt-dist.

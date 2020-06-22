@@ -292,11 +292,8 @@ MODULE_OBJS += \
 	fs/posix/posix-fs.o \
 	fs/posix/posix-fs-factory.o \
 	fs/posix/posix-iostream.o \
+        midi/aica.o \
 	plugins/dcalt/dcalt-provider.o
-ifdef USE_AICA
-MODULE_OBJS += \
-        midi/aica.o
-endif
 endif
 
 ifeq ($(BACKEND),maemo)

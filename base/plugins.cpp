@@ -140,7 +140,7 @@ public:
 		#if defined(USE_TIMIDITY)
 		LINK_PLUGIN(TIMIDITY)
 		#endif
-		#if defined(USE_AICA)
+		#if defined(__DCALT__)
 		LINK_PLUGIN(AICA)
 		#endif
 		#if defined(MACOSX)

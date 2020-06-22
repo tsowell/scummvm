@@ -188,7 +188,6 @@ _no_pragma_pack=no
 _bink=yes
 _cloud=auto
 _pandoc=no
-_aica=no
 # Default vkeybd/eventrec options
 _vkeybd=no
 _eventrec=no
@@ -1054,8 +1053,6 @@ Optional Features:
                            process
   --enable-tts             build support for text to speech
   --disable-tts            don't build support for text to speech
-  --enable-aica            build support for Dreamcast AICA MIDI
-  --disable-aica           don't build support for Dreamcast AICA MIDI
   --disable-bink           don't build with Bink video support
   --opengl-mode=MODE       OpenGL (ES) mode to use for OpenGL output [auto]
                            available modes: auto for autodetection
@@ -1286,8 +1283,6 @@ for ac_option in $@; do
 	--disable-libunity)           _libunity=no           ;;
 	--enable-tts)                 _tts=yes               ;;
 	--disable-tts)                _tts=no                ;;
-	--enable-aica)                _aica=yes              ;;
-	--disable-aica)               _aica=no               ;;
 	--enable-gtk)                 _gtk=yes               ;;
 	--disable-gtk)                _gtk=no                ;;
 	--enable-bink)                _bink=yes              ;;
@@ -5794,26 +5789,6 @@ else
 	echo "$_updates"
 fi
 define_in_config_if_yes $_updates 'USE_UPDATES'
-
-#
-# Check whether to build Dreamcast AICA MIDI support
-#
-echo_n "Building Dreamcast AICA MIDI support... "
-if test "$_aica" = "no"; then
-	echo "no"
-else
-	case $_host_os in
-	dreamcast-alt)
-		echo "yes"
-		_aica=yes
-		;;
-	*)
-		echo "no"
-		_aica=no
-		;;
-	esac
-fi
-define_in_config_if_yes $_aica 'USE_AICA'
 
 #
 # Figure out installation directories
