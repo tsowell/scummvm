@@ -31,6 +31,8 @@ It also supports some additional hardware and modifications:
     Dreamcast modem.
   * It can change VGA modes to output a 320x200 image so that the display can
     handle the vertical scaling.  (see the "VGA options" section below).
+  * It supports Dreamcasts with either 16MB or 32MB system RAM
+    (https://tsowell.github.io/2020/06/21/dreamcast-32mb-ram-upgrade.html)
 
 Talkies run okay from SD card, but there can be slight delays whenever samples
 are loaded.  There are no noticeable delays from a CF card connected via ATA.
@@ -154,10 +156,7 @@ older monitors that depend on sync polarity to determine video resolution.
 
 ## Building from source
 
-### Get the KallistiOS source
-
-The backend should mostly work with the KallistiOS upstream, but the fork below
-adds AICA MIDI out support and has a few small fixes.
+### Get the (custom) KallistiOS source
 
     $ git clone "https://github.com/tsowell/KallistiOS-scummvm" KallistiOS
     $ git clone "https://github.com/tsowell/kos-ports-scummvm" kos-ports
