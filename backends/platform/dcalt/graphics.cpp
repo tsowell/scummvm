@@ -55,7 +55,22 @@ _to_texture_dimension(int x) {
 		return 1024;
 }
 
-RGBSurface::RGBSurface(int w, int h, int pixelFormat, int filteringMode) {
+static int toPVRFormat(const Graphics::PixelFormat format) {
+	if (format == PF_RGB565) {
+		return PVR_TXRFMT_RGB565;
+	}
+	else if (format == PF_ARGB1555) {
+		return PVR_TXRFMT_ARGB1555;
+	}
+	else if (format == PF_ARGB4444) {
+		return PVR_TXRFMT_ARGB4444;
+	}
+	else {
+		return PVR_TXRFMT_RGB565;
+	}
+}
+
+RGBSurface::RGBSurface(int w, int h, int pixelFormat, int filteringMode, bool transparent = true) {
 	size_t texture_size, pixels_size;
 	_width = w;
 	_height = h;
@@ -75,7 +90,7 @@ RGBSurface::RGBSurface(int w, int h, int pixelFormat, int filteringMode) {
 	_texture = (pvr_ptr_t)pvr_mem_malloc(texture_size);
 
         pvr_poly_cxt_txr(&_cxt,
-                         PVR_LIST_TR_POLY,
+                         transparent ? PVR_LIST_TR_POLY : PVR_LIST_OP_POLY,
                          pixelFormat |
                          PVR_TXRFMT_NONTWIDDLED,
                          _texture_width, _texture_height,
@@ -465,7 +480,7 @@ Mouse::Mouse() :
     _cursorPaletteDisabled(true) {
 	_palette = (uint16_t *)memalign(32, 2048);
 	_screenPalette = (uint16_t *)memalign(32, 2048);
-	changeFormat(16, 16, 0);
+	changeFormat(16, 16, PF_CLUT8);
 }
 
 Mouse::~Mouse() {
@@ -580,7 +595,7 @@ void Mouse::draw(float scale) {
 }
 
 void Mouse::changeFormat(uint w, uint h,
-                         const Graphics::PixelFormat *format = NULL) {
+                         const Graphics::PixelFormat format) {
 	if (_pixels) {
 		free(_pixels);
 		_pixels = NULL;
@@ -596,7 +611,7 @@ void Mouse::changeFormat(uint w, uint h,
 
 	_texture_w = _to_texture_dimension(_w);
 	_texture_h = _to_texture_dimension(_h);
-	_format = *format;
+	_format = format;
 
 	if (_texture_w == 0 || _texture_h == 0) {
 		return;
@@ -606,17 +621,33 @@ void Mouse::changeFormat(uint w, uint h,
 	if (_texture_w & 0x1F)
 		_texture_w = (_texture_w & ~0x1F) + 32;
 
-	_pixels = (uint8_t *)memalign(32, _texture_w * _texture_h);
-	_texture = pvr_mem_malloc(2048 + _texture_w * _texture_h);
+	if (format == PF_CLUT8) {
+		_pixels = (uint8_t *)memalign(32, _texture_w * _texture_h);
+		_texture = pvr_mem_malloc(2048 + _texture_w * _texture_h);
 
-	pvr_poly_cxt_txr(&_cxt,
-			 PVR_LIST_TR_POLY,
-			 PVR_TXRFMT_ARGB4444 |
-			 PVR_TXRFMT_VQ_ENABLE |
-			 PVR_TXRFMT_NONTWIDDLED,
-			 _texture_w * 4, _texture_h,
-			 _texture,
-			 PVR_FILTER_NONE);
+		pvr_poly_cxt_txr(&_cxt,
+				 PVR_LIST_TR_POLY,
+				 PVR_TXRFMT_ARGB4444 |
+				 PVR_TXRFMT_VQ_ENABLE |
+				 PVR_TXRFMT_NONTWIDDLED,
+				 _texture_w * 4, _texture_h,
+				 _texture,
+				 PVR_FILTER_NONE);
+	}
+	else {
+		_pixels = (uint8_t *)memalign(32,
+			_texture_w * _texture_h * format.bytesPerPixel);
+		_texture = pvr_mem_malloc(
+			_texture_w * _texture_h * format.bytesPerPixel);
+
+		pvr_poly_cxt_txr(&_cxt,
+				 PVR_LIST_TR_POLY,
+				 toPVRFormat(_format) |
+				 PVR_TXRFMT_NONTWIDDLED,
+				 _texture_w, _texture_h,
+				 _texture,
+				 PVR_FILTER_NONE);
+	}
 	pvr_poly_compile(&_poly, &_cxt);
 }
 
@@ -625,24 +656,25 @@ void Mouse::setCursor(const void *buf, uint w, uint h,
                       bool dontScale, const Graphics::PixelFormat *format) {
 	uint8_t *dst;
 	const uint8_t *src;
-
-	assert(format == 0 ||
-	       *format == PF_CLUT8);
+	Graphics::PixelFormat newFormat = (format == NULL)?PF_CLUT8:*format;
+	int bytesPerPixel;
 
 	if ((w == 0) || (h == 0))
 		return;
 
-	if (w != (uint)_w || h != (uint)_h) {
-		changeFormat(w, h, format);
+	if ((w != (uint)_w) || (h != (uint)_h) || (newFormat != _format)) {
+		changeFormat(w, h, newFormat);
 	}
+
+	bytesPerPixel = (format == 0)?1:_format.bytesPerPixel;
 
 	if (w > 0 && h > 0 && buf) {
 		src = (const uint8_t *)buf;
 		dst = (uint8_t *)_pixels;
 		do {
-			memcpy(dst, src, w);
-			src += w;
-			dst += _texture_w;
+			memcpy(dst, src, w * bytesPerPixel);
+			src += w * bytesPerPixel;
+			dst += _texture_w * bytesPerPixel;
 		} while (--h);
 	}
 
@@ -847,10 +879,6 @@ void DCAltGraphicsManager::initSize(
 		_screenFormat = PF_CLUT8;
 	}
 
-	if ((int)width == _screen_width && (int)height == _screen_height &&
-	    _activeDomain == ConfMan.getActiveDomain())
-		return;
-
 	_activeDomain = ConfMan.getActiveDomain();
 	_screen_width = width;
 	_screen_height = height;
@@ -875,25 +903,16 @@ void DCAltGraphicsManager::initSize(
 	_scale_x = _vid_width / width;
 	_scale_y = _vid_height / height;
 
-	if (_screenFormat == PF_RGB565) {
-		_screen = new RGBSurface(width, height,
-		                         PVR_TXRFMT_RGB565,
-					 _filteringMode);
-	}
-	else if (_screenFormat == PF_ARGB1555) {
-		_screen = new RGBSurface(width, height,
-		                         PVR_TXRFMT_ARGB1555,
-					 _filteringMode);
-	}
-	else if (_screenFormat == PF_ARGB4444) {
-		_screen = new RGBSurface(width, height,
-		                         PVR_TXRFMT_ARGB4444,
-					 _filteringMode);
-	}
-	else {
+	if (_screenFormat == PF_CLUT8) {
 		_screen = new VQSurface(width, height,
 		                        PVR_TXRFMT_RGB565,
-					_filteringMode);
+		                        _filteringMode);
+	}
+	else {
+		_screen = new RGBSurface(width, height,
+					 toPVRFormat(_screenFormat),
+					 _filteringMode,
+					 false);
 	}
 	_screenDirty = true;
 

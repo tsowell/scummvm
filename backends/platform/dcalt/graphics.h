@@ -61,7 +61,7 @@ protected:
 
 class RGBSurface : public PVRSurface {
 public:
-	RGBSurface(int w, int h, int pixelFormat, int filteringMode);
+	RGBSurface(int w, int h, int pixelFormat, int filteringMode, bool transparent);
 	~RGBSurface();
 
 	void fill(uint32 col);
@@ -131,7 +131,7 @@ public:
 	int getX() const { return _x; };
 	int getY() const { return _y; };
 private:
-	void changeFormat(uint w, uint h, const Graphics::PixelFormat *format);
+	void changeFormat(uint w, uint h, const Graphics::PixelFormat format);
 	bool _visible;
 	int _x;
 	int _y;
