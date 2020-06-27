@@ -70,8 +70,9 @@ static int toPVRFormat(const Graphics::PixelFormat format) {
 	}
 }
 
-RGBSurface::RGBSurface(int w, int h, int pixelFormat, int filteringMode, bool transparent = true) {
+RGBSurface::RGBSurface(int w, int h, int pixelFormat, int filteringMode) {
 	size_t texture_size, pixels_size;
+
 	_width = w;
 	_height = h;
 	// align stride to 32 bytes
@@ -90,7 +91,8 @@ RGBSurface::RGBSurface(int w, int h, int pixelFormat, int filteringMode, bool tr
 	_texture = (pvr_ptr_t)pvr_mem_malloc(texture_size);
 
         pvr_poly_cxt_txr(&_cxt,
-                         transparent ? PVR_LIST_TR_POLY : PVR_LIST_OP_POLY,
+                         pixelFormat == PVR_TXRFMT_RGB565 ? PVR_LIST_OP_POLY
+	                                                  : PVR_LIST_TR_POLY,
                          pixelFormat |
                          PVR_TXRFMT_NONTWIDDLED,
                          _texture_width, _texture_height,
@@ -911,8 +913,7 @@ void DCAltGraphicsManager::initSize(
 	else {
 		_screen = new RGBSurface(width, height,
 					 toPVRFormat(_screenFormat),
-					 _filteringMode,
-					 false);
+					 _filteringMode);
 	}
 	_screenDirty = true;
 

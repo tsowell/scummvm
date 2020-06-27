@@ -61,7 +61,7 @@ protected:
 
 class RGBSurface : public PVRSurface {
 public:
-	RGBSurface(int w, int h, int pixelFormat, int filteringMode, bool transparent);
+	RGBSurface(int w, int h, int pixelFormat, int filteringMode);
 	~RGBSurface();
 
 	void fill(uint32 col);
