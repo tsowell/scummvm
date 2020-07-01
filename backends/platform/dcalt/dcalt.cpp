@@ -446,6 +446,10 @@ void *OSystem_DCAlt::eventThreadFunction(void *arg) {
 	uint64 time;
 	int width;
 	int i;
+
+	event.mouse.x = 0;
+	event.mouse.y = 0;
+
 	while (!os->_quitting) {
 		thd_sleep(10);
 
@@ -476,6 +480,8 @@ void *OSystem_DCAlt::eventThreadFunction(void *arg) {
 
 			if ((dx != 0) || (dy != 0)) {
 				event.type = Common::EVENT_MOUSEMOVE;
+				// These will be translated to absolute virtual
+				// coords by pollEvent
 				event.mouse.x = dx;
 				event.mouse.y = dy;
 				os->_eventMutex->lock();
@@ -502,6 +508,8 @@ void *OSystem_DCAlt::eventThreadFunction(void *arg) {
 
 			if ((dx != 0) || (dy != 0)) {
 				event.type = Common::EVENT_MOUSEMOVE;
+				// These will be translated to absolute virtual
+				// coords by pollEvent
 				event.mouse.x = dx;
 				event.mouse.y = dy;
 				os->_eventMutex->lock();
@@ -712,17 +720,11 @@ bool OSystem_DCAlt::pollEvent(Common::Event &event) {
 
 	event = _eventQueue.pop();
 
-	dx = event.mouse.x;
-	dy = event.mouse.y;
-	event.mouse.x = lastX;
-	event.mouse.y = lastY;
+	// Convert relative mouse data into absolute virtual screen
+	// coordinates
+	((DCAltGraphicsManager *)_graphicsManager)->
+		translateMouse(event, event.mouse.x, event.mouse.y);
 
-	if (event.type == Common::EVENT_MOUSEMOVE) {
-		((DCAltGraphicsManager *)_graphicsManager)->
-			translateMouse(event, dx, dy);
-		lastX = event.mouse.x;
-		lastY = event.mouse.y;
-	}
 	return true;
 }
 

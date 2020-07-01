@@ -545,25 +545,26 @@ void Mouse::load() {
 	}
 }
 
-void Mouse::draw(float scale) {
-	int scale_w, scale_h;
-	int scale_x, scale_y;
+void Mouse::draw(int offset_x, int offset_y, float scale_x, float scale_y,
+                 float cursor_scale) {
+	int draw_w, draw_h;
+	int draw_x, draw_y;
 
 	if (!_visible) {
 		return;
 	}
 
 	if (_dontScale) {
-		scale_w = _w;
-		scale_h = _h;
-		scale_x = _x - _hotspotX;
-		scale_y = _y - _hotspotY;
+		draw_w = _w;
+		draw_h = _h;
+		draw_x = (_x - _hotspotX) * scale_x + offset_x;
+		draw_y = (_y - _hotspotY) * scale_y + offset_y;
 	}
 	else {
-		scale_w = scale * _w;
-		scale_h = scale * _h;
-		scale_x = _x - (scale * _hotspotX);
-		scale_y = _y - (scale * _hotspotY);
+		draw_w = _w * scale_x * cursor_scale;
+		draw_h = _h * scale_y * cursor_scale;
+		draw_x = (_x - _hotspotX * cursor_scale) * scale_x + offset_x;
+		draw_y = (_y - _hotspotY * cursor_scale) * scale_y + offset_y;
 	}
 
 	pvr_vertex_t vert;
@@ -571,8 +572,8 @@ void Mouse::draw(float scale) {
 	pvr_prim(&_poly, sizeof(pvr_poly_hdr_t));
 
 	vert.flags = PVR_CMD_VERTEX;
-	vert.x = scale_x + 0.0f;
-	vert.y = scale_y + scale_h;
+	vert.x = draw_x + 0.0f;
+	vert.y = draw_y + draw_h;
 	vert.z = 15.0f;
 	vert.u = 0.0f;
 	vert.v = _h / (float)_texture_h;
@@ -580,18 +581,18 @@ void Mouse::draw(float scale) {
 	vert.oargb = 0;
 	pvr_prim(&vert, sizeof(vert));
 
-	vert.y = scale_y + 0.0f;
+	vert.y = draw_y + 0.0f;
 	vert.v = 0.0f;
 	pvr_prim(&vert, sizeof(vert));
 
-	vert.x = scale_x + scale_w;
-	vert.y = scale_y + scale_h;
+	vert.x = draw_x + draw_w;
+	vert.y = draw_y + draw_h;
 	vert.u = _w / (float)_texture_w;
 	vert.v = _h / (float)_texture_h;
 	pvr_prim(&vert, sizeof(vert));
 
 	vert.flags = PVR_CMD_VERTEX_EOL;
-	vert.y = scale_y + 0.0f;
+	vert.y = draw_y + 0.0f;
 	vert.v = 0.0f;
 	pvr_prim(&vert, sizeof(vert));
 }
@@ -748,13 +749,9 @@ DCAltGraphicsManager::DCAltGraphicsManager() :
     _screenDirty(false),
     _shakeXOffset(0),
     _shakeYOffset(0),
-    _screen_height(0),
-    _screen_width(0),
     _screen(NULL),
     _overlay(NULL),
     _aspectRatioCorrection(false),
-    _scale_x(1),
-    _scale_y(1),
     _activeDomain(0),
     _screenFormat(PF_CLUT8),
     _filteringMode(PVR_FILTER_NONE)
@@ -835,10 +832,22 @@ bool DCAltGraphicsManager::getFeatureState(OSystem::Feature f) const {
 }
 
 void DCAltGraphicsManager::showOverlay() {
+	int mouse_offset_y = \
+	    (_vid_height - _screen->getHeight() * getScaleY()) / 2;
+
+	warpMouse(_mouse->getX() * getScaleX(),
+	          _mouse->getY() * getScaleY() + mouse_offset_y);
+
 	_overlayHidden = false;
 }
 
 void DCAltGraphicsManager::hideOverlay() {
+	int mouse_offset_y = \
+	    (_vid_height - _screen->getHeight() * getScaleY()) / 2;
+
+	warpMouse(_mouse->getX() / getScaleX(),
+	          (_mouse->getY() - mouse_offset_y) / getScaleY());
+
 	_overlayHidden = true;
 }
 
@@ -882,8 +891,6 @@ void DCAltGraphicsManager::initSize(
 	}
 
 	_activeDomain = ConfMan.getActiveDomain();
-	_screen_width = width;
-	_screen_height = height;
 
 	_screenChangeCount++;
 
@@ -901,9 +908,6 @@ void DCAltGraphicsManager::initSize(
 
 	pvr_shutdown();
 	initOverlay(width, height);
-
-	_scale_x = _vid_width / width;
-	_scale_y = _vid_height / height;
 
 	if (_screenFormat == PF_CLUT8) {
 		_screen = new VQSurface(width, height,
@@ -1109,14 +1113,6 @@ void DCAltGraphicsManager::setShakePos(int shakeXOffset, int shakeYOffset) {
 
 void DCAltGraphicsManager::updateScreen() {
 	int align_x, align_y;
-	float ar_scale_y;
-
-	if (_aspectRatioCorrection && _screen &&
-	    !vgaModeAspectRatioCorrection() &&
-	    _screen->getWidth() == 320 && _screen->getHeight() == 200)
-		ar_scale_y = _scale_y * ((float)240 / 200);
-	else
-		ar_scale_y = _scale_y;
 
 	if (_overlayDirty) {
 		_overlay->loadTexture();
@@ -1141,14 +1137,14 @@ void DCAltGraphicsManager::updateScreen() {
 			pvr_list_begin(PVR_LIST_TR_POLY);
 
 		align_x = (_overlay->getWidth() -
-		           _screen->getWidth() * _scale_x) / 2;
+		           _screen->getWidth() * getScaleX()) / 2;
 		align_y = (_overlay->getHeight() -
-		           _screen->getHeight() * ar_scale_y) / 2;
+		           _screen->getHeight() * getScaleY()) / 2;
 
 		_screen->draw(align_x + _shakeXOffset,
 		              align_y + _shakeYOffset,
 		              5.0f,
-			      _scale_x, ar_scale_y);
+			      getScaleX(), getScaleY());
 		if (_screenFormat == PF_RGB565 || _screenFormat == PF_CLUT8)
 			pvr_list_finish();
 	}
@@ -1158,11 +1154,16 @@ void DCAltGraphicsManager::updateScreen() {
 	if (!_overlayHidden)
 		_overlay->draw(0, 0, 10.0f,
 			       1.0f, 1.0f);
-	if (_vid_width == 640) {
-		_mouse->draw(2.0f);
+
+	if (_overlayHidden) {
+		int mouse_offset_y = \
+		    (_vid_height - _screen->getHeight() * getScaleY()) / 2;
+		_mouse->draw(0, mouse_offset_y, getScaleX(), getScaleY(), 1.0f);
 	}
-	else
-		_mouse->draw(1.0f);
+	else {
+		_mouse->draw(0, 0, 1.0f, 1.0f, 2.0f);
+	}
+
 	pvr_list_finish();
 
 	pvr_scene_finish();
@@ -1195,6 +1196,31 @@ int16 DCAltGraphicsManager::getOverlayWidth() const {
 
 int16 DCAltGraphicsManager::getOverlayHeight() const {
 	return _vid_height;
+}
+
+float DCAltGraphicsManager::getScaleX() const {
+	if (_screen)
+		return _vid_width / _screen->getWidth();
+	else
+		return 1.0f;
+}
+
+float DCAltGraphicsManager::getScaleY() const {
+	float scale_y, ar_scale_y;
+
+	if (_screen)
+		scale_y = _vid_height / _screen->getHeight();
+	else
+		scale_y = 1.0f;
+
+	if (_aspectRatioCorrection && _screen &&
+	    !vgaModeAspectRatioCorrection() &&
+	    _screen->getWidth() == 320 && _screen->getHeight() == 200)
+		ar_scale_y = scale_y * ((float)240 / 200);
+	else
+		ar_scale_y = scale_y;
+
+	return ar_scale_y;
 }
 
 bool DCAltGraphicsManager::showMouse(bool visible) {
@@ -1231,40 +1257,30 @@ void DCAltGraphicsManager::unlockScreen() {
 }
 
 void DCAltGraphicsManager::translateMouse(Common::Event &event, int dx, int dy) {
-	int newx, newy;
-	float ar_scale_y;
-	int offset;
-
-	if (_aspectRatioCorrection && _screen &&
-	    !vgaModeAspectRatioCorrection() &&
-	    _screen->getWidth() == 320 && _screen->getHeight() == 200)
-		ar_scale_y = _scale_y * ((float)240 / 200);
-	else
-		ar_scale_y = _scale_y;
-
-	newx = _mouse->getX() + dx;
-	newy = _mouse->getY() + dy;
-
-	if (newx < 0)
-		newx = 0;
-	else if (newx >= _vid_width)
-		newx = _vid_width -1 ;
-	if (newy < 0)
-		newy = 0;
-	else if (newy >= _vid_height)
-		newy = _vid_height -1 ;
-
-	warpMouse(newx, newy);
+	int width, height;
 
 	if (_overlayHidden) {
-		offset = (_vid_height - _screen->getHeight() * ar_scale_y) / 2;
-		event.mouse.x = (float)(newx) / _scale_x;
-		event.mouse.y = (float)(newy - offset) / ar_scale_y;
+		width =  _screen->getWidth();
+		height =  _screen->getHeight();
 	}
 	else {
-		event.mouse.x = newx;
-		event.mouse.y = newy;
+		width = _vid_width;
+		height = _vid_height;
 	}
+
+	event.mouse.x = _mouse->getX() + dx;
+	event.mouse.y = _mouse->getY() + dy;
+
+	if (event.mouse.x < 0)
+		event.mouse.x = 0;
+	else if (event.mouse.x >= width)
+		event.mouse.x = width -1 ;
+	if (event.mouse.y < 0)
+		event.mouse.y = 0;
+	else if (event.mouse.y >= height)
+		event.mouse.y = height -1 ;
+
+	warpMouse(event.mouse.x, event.mouse.y);
 }
 
 bool DCAltGraphicsManager::vgaModeAspectRatioCorrection() {

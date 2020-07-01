@@ -121,7 +121,7 @@ public:
 	bool show(bool visible);
 	void warp(int x, int y);
 	void load();
-	void draw(float);
+	void draw(int, int, float, float, float);
 	void setCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL);
 	void setCursorPalette(const byte *colors, uint start, uint num);
 	void setScreenPalette(const byte *colors, uint start, uint num);
@@ -197,6 +197,9 @@ public:
 	int16 getOverlayWidth() const;
 	bool getOverlayHidden() { return _overlayHidden; };
 
+	float getScaleX() const;
+	float getScaleY() const;
+
 	bool showMouse(bool visible);
 	void warpMouse(int x, int y);
 	void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL);
@@ -217,8 +220,6 @@ private:
 	bool _screenDirty;
 	int _vid_width;
 	int _vid_height;
-	int _screen_width;
-	int _screen_height;
 	int _shakeXOffset;
 	int _shakeYOffset;
 	PVRSurface *_overlay;
@@ -226,8 +227,6 @@ private:
 	Mouse *_mouse;
 	Graphics::Surface _surface;
 	bool _aspectRatioCorrection;
-	int _scale_x;
-	int _scale_y;
 	Graphics::PixelFormat _screenFormat;
 	int _filteringMode;
 };
