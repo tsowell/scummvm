@@ -399,9 +399,6 @@ void OSystem_DCAlt::handleButtons(
 		  EVENT_KEYDOWN, KeyState(KEYCODE_KP3, 0) },
 	};
 
-	event.mouse.x = dx;
-	event.mouse.y = dy;
-
 	for (i = 0; i < (int)(sizeof(mapping) / sizeof(mapping[0])); i++) {
 		if (changedButtons & mapping[i].button) {
 			buttonUp = !(buttons & mapping[i].button);
@@ -443,7 +440,6 @@ void *OSystem_DCAlt::eventThreadFunction(void *arg) {
 	int dx = 0, dy = 0;
 	Common::Event event;
 	uint32 changedButtons;
-	uint64 time;
 	int width;
 	int i;
 
@@ -702,9 +698,8 @@ bool OSystem_DCAlt::hasFeature(Feature f) {
 }
 
 bool OSystem_DCAlt::pollEvent(Common::Event &event) {
-	static int lastX = 0, lastY = 0;
-	static int dx, dy;
 	Common::StackLock lock(*_eventMutex);
+	DCAltGraphicsManager *graphicsManager = _graphicsManager;
 
 	// This doesn't belong here but has problems when done in a different
 	// thread.
@@ -720,10 +715,16 @@ bool OSystem_DCAlt::pollEvent(Common::Event &event) {
 
 	event = _eventQueue.pop();
 
-	// Convert relative mouse data into absolute virtual screen
-	// coordinates
-	((DCAltGraphicsManager *)_graphicsManager)->
-		translateMouse(event, event.mouse.x, event.mouse.y);
+	if (event.type == Common::EVENT_MOUSEMOVE) {
+		// Convert relative mouse data into absolute virtual screen
+		// coordinates
+		graphicsManager-> translateMouse(
+		    event, event.mouse.x, event.mouse.y);
+	}
+	else {
+		event.mouse.x = graphicsManager->getMouseX();
+		event.mouse.y = graphicsManager->getMouseY();
+	}
 
 	return true;
 }

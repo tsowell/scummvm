@@ -200,6 +200,9 @@ public:
 	float getScaleX() const;
 	float getScaleY() const;
 
+	int getMouseX() const;
+	int getMouseY() const;
+
 	bool showMouse(bool visible);
 	void warpMouse(int x, int y);
 	void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL);

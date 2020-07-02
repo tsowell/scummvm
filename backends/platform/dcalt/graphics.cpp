@@ -1205,6 +1205,13 @@ float DCAltGraphicsManager::getScaleX() const {
 		return 1.0f;
 }
 
+int DCAltGraphicsManager::getMouseX() const {
+	return _mouse->getX();
+}
+int DCAltGraphicsManager::getMouseY() const {
+	return _mouse->getY();
+}
+
 float DCAltGraphicsManager::getScaleY() const {
 	float scale_y, ar_scale_y;
 
