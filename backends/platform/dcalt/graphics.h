@@ -37,6 +37,7 @@
 class PVRSurface {
 public:
 	virtual ~PVRSurface() {};
+	virtual void setFilteringMode(int filteringMode) = 0;
 	virtual void clear() = 0;
 	virtual void grab(void *buf, int pitch) const = 0;
 	virtual void copyRect(const void *buf, int pitch,
@@ -64,6 +65,7 @@ public:
 	RGBSurface(int w, int h, int pixelFormat, int filteringMode);
 	~RGBSurface();
 
+	void setFilteringMode(int filteringMode);
 	void fill(uint32 col);
 	void clear();
 	void grab(void *buf, int pitch) const;
@@ -91,6 +93,8 @@ class VQSurface : public PVRSurface {
 public:
 	VQSurface(int w, int h, int format, int filteringMode);
 	~VQSurface();
+
+	void setFilteringMode(int filteringMode);
 	void fill(uint32 col);
         void clear();
         void grab(void *buf, int pitch) const;
@@ -118,6 +122,7 @@ class Mouse {
 public:
 	Mouse();
 	~Mouse();
+	void setFilteringMode(int filteringMode);
 	bool show(bool visible);
 	void warp(int x, int y);
 	void load();
@@ -153,6 +158,7 @@ private:
 	pvr_poly_cxt_t _cxt;
 	pvr_poly_hdr_t _poly;
 	bool _cursorPaletteDisabled;
+	int _filteringMode;
 };
 
 class DCAltGraphicsManager : public GraphicsManager {

@@ -108,6 +108,11 @@ RGBSurface::~RGBSurface() {
 		pvr_mem_free(_texture);
 }
 
+void RGBSurface::setFilteringMode(int filteringMode) {
+	_cxt.txr.filter = filteringMode;
+	pvr_poly_compile(&_poly, &_cxt);
+}
+
 void RGBSurface::fill(uint32 col) {
 	sq_set((uint16_t *)_pixels, col, _stride * _height * sizeof(uint16_t));
 }
@@ -269,6 +274,16 @@ VQSurface::VQSurface(int w, int h, int format, int filteringMode) {
 	                 _last_tile_texture_width * 4, _texture_height,
 	                 _last_tile.texture,
 	                 filteringMode);
+	pvr_poly_compile(&_last_tile.poly, &_last_tile.cxt);
+}
+
+void VQSurface::setFilteringMode(int filteringMode) {
+	int i;
+	for (i = 0; i < _tiles_count; i++) {
+		_tiles[i].cxt.txr.filter = filteringMode;
+		pvr_poly_compile(&_tiles[i].poly, &_tiles[i].cxt);
+	}
+	_last_tile.cxt.txr.filter = filteringMode;
 	pvr_poly_compile(&_last_tile.poly, &_last_tile.cxt);
 }
 
@@ -479,7 +494,8 @@ Mouse::Mouse() :
     _keycolor(0),
     _pixels(NULL),
     _texture(NULL),
-    _cursorPaletteDisabled(true) {
+    _cursorPaletteDisabled(true),
+    _filteringMode(PVR_FILTER_NONE) {
 	_palette = (uint16_t *)memalign(32, 2048);
 	_screenPalette = (uint16_t *)memalign(32, 2048);
 	changeFormat(16, 16, PF_CLUT8);
@@ -494,6 +510,12 @@ Mouse::~Mouse() {
 		free(_palette);
 	if (_screenPalette)
 		free(_screenPalette);
+}
+
+void Mouse::setFilteringMode(int filteringMode) {
+	_filteringMode = filteringMode;
+	_cxt.txr.filter = _filteringMode;
+	pvr_poly_compile(&_poly, &_cxt);
 }
 
 bool Mouse::show(bool visible) {
@@ -644,7 +666,7 @@ void Mouse::changeFormat(uint w, uint h,
 				 PVR_TXRFMT_NONTWIDDLED,
 				 _texture_w * 4, _texture_h,
 				 _texture,
-				 PVR_FILTER_NONE);
+				 _filteringMode);
 	}
 	else {
 		_pixels = (uint8_t *)memalign(32,
@@ -658,7 +680,7 @@ void Mouse::changeFormat(uint w, uint h,
 				 PVR_TXRFMT_NONTWIDDLED,
 				 _texture_w, _texture_h,
 				 _texture,
-				 PVR_FILTER_NONE);
+				 _filteringMode);
 	}
 	pvr_poly_compile(&_poly, &_cxt);
 }
@@ -817,6 +839,8 @@ void DCAltGraphicsManager::setFeatureState(OSystem::Feature f, bool enable) {
 			_filteringMode = PVR_FILTER_BILINEAR;
 		else
 			_filteringMode = PVR_FILTER_NONE;
+		if (_screen)
+			_screen->setFilteringMode(_filteringMode);
 		break;
 	default:
 		break;
@@ -844,6 +868,8 @@ void DCAltGraphicsManager::showOverlay() {
 	int mouse_offset_y = \
 	    (_vid_height - _screen->getHeight() * getScaleY()) / 2;
 
+	_mouse->setFilteringMode(PVR_FILTER_NONE);
+
 	warpMouse(_mouse->getX() * getScaleX(),
 	          _mouse->getY() * getScaleY() + mouse_offset_y);
 
@@ -853,6 +879,8 @@ void DCAltGraphicsManager::showOverlay() {
 void DCAltGraphicsManager::hideOverlay() {
 	int mouse_offset_y = \
 	    (_vid_height - _screen->getHeight() * getScaleY()) / 2;
+
+	_mouse->setFilteringMode(_filteringMode);
 
 	warpMouse(_mouse->getX() / getScaleX(),
 	          (_mouse->getY() - mouse_offset_y) / getScaleY());
