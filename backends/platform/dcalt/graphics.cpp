@@ -510,36 +510,45 @@ void Mouse::warp(int x, int y) {
 }
 
 void Mouse::load() {
-	int i;
-	uint8_t *dst, *src;
+	int rows;
+	int i, j;
+	uint16_t *dst, *src;
 
 	if (_pixels && _texture) {
-		if (_paletteDirty) {
+		if (_paletteDirty && (_format == PF_CLUT8)) {
 			if (!_cursorPaletteDisabled) {
-				_palette[_keycolor * 4 + 0] = 0x0000;
-				_palette[_keycolor * 4 + 1] = 0x0000;
-				_palette[_keycolor * 4 + 2] = 0x0000;
-				_palette[_keycolor * 4 + 3] = 0x0000;
 				pvr_txr_load(_palette, _texture, 2048);
 			}
 			else {
-				_screenPalette[_keycolor * 4 + 0] = 0x0000;
-				_screenPalette[_keycolor * 4 + 1] = 0x0000;
-				_screenPalette[_keycolor * 4 + 2] = 0x0000;
-				_screenPalette[_keycolor * 4 + 3] = 0x0000;
 				pvr_txr_load(_screenPalette, _texture, 2048);
 			}
+			((uint16_t *)_texture)[_keycolor * 4 + 0] = 0x0000;
+			((uint16_t *)_texture)[_keycolor * 4 + 1] = 0x0000;
+			((uint16_t *)_texture)[_keycolor * 4 + 2] = 0x0000;
+			((uint16_t *)_texture)[_keycolor * 4 + 3] = 0x0000;
 		}
 
-		if (_cursorDirty) {
-			pvr_txr_load(_pixels, ((uint8_t *)_texture) + 2048,
-			             _texture_w * _texture_h);
-			src = (uint8_t *)_pixels;
-			dst = ((uint8_t *)_texture) + 2048;
-			for (i = 0; i < _h; i++) {
-				sq_cpy(dst, src, _texture_w);
-				src += _texture_w;
-				dst += _texture_w;
+		// We also have to reload the cursor in 16-bit color mode if
+		// the palette is dirty because it indicates that the key color
+		// has changed.
+		if (_cursorDirty || (_paletteDirty && (_format != PF_CLUT8))) {
+			src = (uint16_t *)_pixels;
+			if (_format.bytesPerPixel == 2) {
+				dst = (uint16_t *)_texture;
+				for (i = 0; i < _texture_h; i++) {
+					for (j = 0; j < _texture_w; j++) {
+						if (*dst != _keycolor)
+							*dst = *src;
+						else
+							*dst = 0;
+						dst++;
+						src++;
+					}
+				}
+			}
+			else {
+				dst = (uint16_t *)(((uint8_t *)_texture) + 2048);
+				memcpy(dst, src, _texture_w * _texture_h);
 			}
 		}
 	}
