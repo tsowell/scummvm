@@ -536,6 +536,10 @@ void Mouse::load() {
 	int i, j;
 	uint16_t *dst, *src;
 
+	if (!_visible || (_w == 0) || (_h == 0)) {
+		return;
+	}
+
 	if (_pixels && _texture) {
 		if (_paletteDirty && (_format == PF_CLUT8)) {
 			if (!_cursorPaletteDisabled) {
@@ -581,7 +585,7 @@ void Mouse::draw(int offset_x, int offset_y, float scale_x, float scale_y,
 	int draw_w, draw_h;
 	int draw_x, draw_y;
 
-	if (!_visible) {
+	if (!_visible || (_w == 0) || (_h == 0)) {
 		return;
 	}
 
@@ -693,12 +697,12 @@ void Mouse::setCursor(const void *buf, uint w, uint h,
 	Graphics::PixelFormat newFormat = (format == NULL)?PF_CLUT8:*format;
 	int bytesPerPixel;
 
-	if ((w == 0) || (h == 0))
-		return;
-
 	if ((w != (uint)_w) || (h != (uint)_h) || (newFormat != _format)) {
 		changeFormat(w, h, newFormat);
 	}
+
+	if ((w == 0) || (h == 0))
+		return;
 
 	bytesPerPixel = (format == 0)?1:_format.bytesPerPixel;
 
