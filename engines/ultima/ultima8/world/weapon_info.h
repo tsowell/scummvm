@@ -23,8 +23,13 @@
 #ifndef ULTIMA8_WORLD_WEAPONINFO_H
 #define ULTIMA8_WORLD_WEAPONINFO_H
 
+#include "ultima/shared/std/string.h"
+
+namespace Ultima {
+namespace Ultima8 {
 
 struct WeaponInfo {
+	Std::string _name;
 	uint32 _shape;
 	uint8 _overlayType;
 	uint32 _overlayShape;
@@ -35,6 +40,11 @@ struct WeaponInfo {
 	uint8 _armourBonus;
 	uint16 _damageType;
 	int _treasureChance;
+
+	// Crusader-specific fields:
+	uint16 _sound;		//!< The sound this weapon makes when fired
+	uint16 _ammoType;	//!< The type of ammo it uses
+	uint16 _displayFrame;	//!< The frame to use in the inventory gump
 
 	enum DmgType {
 		DMG_NORMAL = 0x0001,
@@ -49,5 +59,7 @@ struct WeaponInfo {
 	};
 };
 
+} // End of namespace Ultima8
+} // End of namespace Ultima
 
 #endif

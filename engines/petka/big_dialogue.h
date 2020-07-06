@@ -28,6 +28,8 @@
 
 namespace Petka {
 
+class PetkaEngine;
+
 enum {
 	kOpcodePlay = 1,
 	kOpcodeMenu,
@@ -104,7 +106,7 @@ struct SpeechInfo {
 
 class BigDialogue {
 public:
-	BigDialogue();
+	BigDialogue(PetkaEngine &vm);
 
 	uint opcode();
 
@@ -115,7 +117,7 @@ public:
 	const DialogHandler *findHandler(uint objId, uint opcode, bool *fallback) const;
 	void setHandler(uint objId, uint opcode);
 
-	const Common::U32String *getSpeechInfo(int *talkerId, const char **soundName, int unk);
+	const Common::U32String *getSpeechInfo(int *talkerId, const char **soundName, int choice);
 	void getMenuChoices(Common::Array<Common::U32String> &choices);
 
 	void load(Common::ReadStream *s);
@@ -125,8 +127,11 @@ private:
 	void loadSpeechesInfo();
 	bool checkMenu(uint opIndex);
 	bool findOperation(uint startOpIndex, uint opType, uint *resIndex);
+	void circleMoveTo(byte index);
 
 private:
+	PetkaEngine &_vm;
+
 	Operation *_currOp;
 	Common::Array<Operation> _ops;
 	uint _startOpIndex;

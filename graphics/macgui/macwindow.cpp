@@ -32,7 +32,7 @@
 namespace Graphics {
 
 BaseMacWindow::BaseMacWindow(int id, bool editable, MacWindowManager *wm) :
-		MacWidget(nullptr, 0, 0, 0, 0, true), _id(id), _editable(editable), _wm(wm) {
+	MacWidget(nullptr, 0, 0, 0, 0, wm, true), _id(id), _editable(editable) {
 	_callback = 0;
 	_dataPtr = 0;
 
@@ -195,18 +195,6 @@ const int arrowPixels[ARROW_H][ARROW_W] = {
 		{0,1,1,1,1,1,1,1,1,1,1,0},
 		{1,1,1,1,1,1,1,1,1,1,1,1}};
 
-int localColorWhite, localColorBlack;
-
-static void drawPixelInverted(int x, int y, int color, void *data) {
-	ManagedSurface *surface = (ManagedSurface *)data;
-
-	if (x >= 0 && x < surface->w && y >= 0 && y < surface->h) {
-		byte *p = (byte *)surface->getBasePtr(x, y);
-
-		*p = *p == localColorWhite ? localColorBlack : localColorWhite;
-	}
-}
-
 void MacWindow::updateInnerDims() {
 	if (_dims.isEmpty())
 		return;
@@ -304,10 +292,7 @@ void MacWindow::drawSimpleBorder(ManagedSurface *g) {
 				int ry2 = ry1 + _dims.height() * _scrollSize;
 				Common::Rect rr(rx1, ry1, rx2, ry2);
 
-				localColorWhite = _wm->_colorWhite;
-				localColorBlack = _wm->_colorBlack;
-
-				Graphics::drawFilledRect(rr, _wm->_colorBlack, drawPixelInverted, g);
+				Graphics::drawFilledRect(rr, _wm->_colorBlack, Graphics::macInvertPixel, g);
 			}
 		}
 		if (closeable) {
@@ -494,6 +479,11 @@ bool MacWindow::processEvent(Common::Event &event) {
 
 	switch (event.type) {
 	case Common::EVENT_MOUSEMOVE:
+		if (_wm->_mouseDown && _wm->_hoveredWidget && !_wm->_hoveredWidget->_dims.contains(event.mouse.x, event.mouse.y)) {
+			_wm->_hoveredWidget->setActive(false);
+			_wm->_hoveredWidget = nullptr;
+		}
+
 		if (_beingDragged) {
 			_dims.translate(event.mouse.x - _draggedX, event.mouse.y - _draggedY);
 			updateInnerDims();
@@ -542,6 +532,7 @@ bool MacWindow::processEvent(Common::Event &event) {
 	case Common::EVENT_LBUTTONUP:
 		_beingDragged = false;
 		_beingResized = false;
+		_wm->_mouseDownWidget = nullptr;
 
 		setHighlight(kBorderNone);
 		break;
@@ -559,9 +550,16 @@ bool MacWindow::processEvent(Common::Event &event) {
 		return false;
 	}
 
-	MacWidget *w = findEventHandler(event, _dims.left, _dims.top);
-	if (w && w != this && w->processEvent(event))
-		return true;
+	MacWidget *w = _wm->_mouseDownWidget ? _wm->_mouseDownWidget : findEventHandler(event, _dims.left, _dims.top);
+	if (w && w != this) {
+		_wm->_hoveredWidget = w;
+
+		if (event.type == Common::EVENT_LBUTTONDOWN)
+			_wm->_mouseDownWidget = w;
+
+		if (w->processEvent(event))
+			return true;
+	}
 
 	if (_callback)
 		return (*_callback)(click, event, _dataPtr);

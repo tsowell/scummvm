@@ -29,7 +29,16 @@ namespace Director {
 
 Stxt::Stxt(Common::SeekableSubReadStreamEndian &textStream) {
 	// TODO: Side effects on textStream make this a little hard to understand in context?
-	uint32 unk1 = textStream.readUint32();
+
+	// D4+ variant
+	if (textStream.size() == 0)
+		return;
+
+	uint32 offset = textStream.readUint32();
+	if (offset != 12){
+		error("Stxt init: unhandlef offset");
+		return;
+	}
 	uint32 strLen = textStream.readUint32();
 	uint32 dataLen = textStream.readUint32();
 	Common::String text;
@@ -51,7 +60,7 @@ Stxt::Stxt(Common::SeekableSubReadStreamEndian &textStream) {
 		}
 		text += ch;
 	}
-	debugC(3, kDebugText, "Stxt init: unk1: %d strLen: %d dataLen: %d textlen: %u", unk1, strLen, dataLen, text.size());
+	debugC(3, kDebugText, "Stxt init: offset: %d strLen: %d dataLen: %d textlen: %u", offset, strLen, dataLen, text.size());
 	if (strLen < 200)
 		debugC(3, kDebugText, "text: '%s'", Common::toPrintable(text).c_str());
 
@@ -75,7 +84,7 @@ Stxt::Stxt(Common::SeekableSubReadStreamEndian &textStream) {
 		_palinfo3 = textStream.readUint16();
 
 		debugC(3, kDebugText, "Stxt init: formattingCount: %u, formatStartOffset: %d, height: %d ascent: %d, fontId: %d, textSlant: %d padding: 0x%02x",
-			   formattingCount, formatStartOffset, height, ascent, _fontId, _textSlant, padding);
+				formattingCount, formatStartOffset, height, ascent, _fontId, _textSlant, padding);
 
 		debugC(3, kDebugText, "        fontSize: %d, p0: %x p1: %x p2: %x", _fontSize, _palinfo1, _palinfo2, _palinfo3);
 
@@ -86,7 +95,7 @@ Stxt::Stxt(Common::SeekableSubReadStreamEndian &textStream) {
 			_ftext += text.firstChar();
 			text.deleteChar(0);
 
-			if (f == '\001')    // Insert two \001s as a replacement
+			if (f == '\001')	// Insert two \001s as a replacement
 				_ftext += '\001';
 
 			prevPos++;
