@@ -256,7 +256,7 @@ Common::String DCAltSaveFileManager::makeSavefileName(
 Common::InSaveFile *DCAltSaveFileManager::openRawFile(
     const Common::String &filename) {
 	if (!(strncmp(getSavePath().c_str(), "/vmu", 4) == 0))
-		return DefaultSaveFileManager::openForLoading(filename);
+		return DefaultSaveFileManager::openRawFile(filename);
 
 	assureCached(getSavePath());
         if (getError().getCode() != Common::kNoError)
