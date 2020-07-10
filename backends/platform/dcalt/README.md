@@ -27,12 +27,13 @@ It also supports some additional hardware and modifications:
     (see "Saved games" and "scummvm.ini paths" below).
   * It can output MIDI over a Dreamcast MIDI Interface Cable or the AICA MIDI
     out port so an external synth, like an MT-32, can be used.  The AICA MIDI
-    signals are available on the G2 port, so a MIDI connector can be added to a
-    Dreamcast modem.
+    signals are available on the G2 port, so a [MIDI connector can be added to
+    a Dreamcast modem](
+    https://tsowell.github.io/2020/07/09/dreamcast-aici-midi.html).
   * It can change VGA modes to output a 320x200 image so that the display can
     handle the vertical scaling.  (see the "VGA options" section below).
-  * It supports Dreamcasts with either 16MB or 32MB system RAM
-    (https://tsowell.github.io/2020/06/21/dreamcast-32mb-ram-upgrade.html)
+  * It supports Dreamcasts with either 16MB or [32MB system RAM](
+    https://tsowell.github.io/2020/06/21/dreamcast-32mb-ram-upgrade.html)
 
 Talkies run okay from SD card, but there can be slight delays whenever samples
 are loaded.  There are no noticeable delays from a CF card connected via ATA.
