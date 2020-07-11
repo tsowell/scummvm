@@ -31,6 +31,7 @@
 #include "backends/graphics/graphics.h"
 #include "graphics/surface.h"
 #include "common/events.h"
+#include "common/config-manager.h"
 
 #include "graphics/colormasks.h"
 
@@ -216,14 +217,14 @@ public:
 
 	void translateMouse(Common::Event &event, int dx, int dy);
 private:
-	bool vgaModeAspectRatioCorrection();
+	bool vgaModeAspectRatioCorrection() const;
 	void initOverlay(int width, int height);
 	void initVideo640x480();
 	void initVideo640x400();
 	void initVideo320x240();
 	bool _vga;
 	int _screenChangeCount;
-	int _activeDomain;
+	Common::ConfigManager::Domain *_activeDomain;
 	bool _overlayHidden;
 	bool _overlayDirty;
 	bool _screenDirty;

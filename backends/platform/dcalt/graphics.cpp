@@ -532,7 +532,6 @@ void Mouse::warp(int x, int y) {
 }
 
 void Mouse::load() {
-	int rows;
 	int i, j;
 	uint16_t *dst, *src;
 
@@ -830,7 +829,6 @@ bool DCAltGraphicsManager::hasFeature(OSystem::Feature f) const {
 }
 
 void DCAltGraphicsManager::setFeatureState(OSystem::Feature f, bool enable) {
-	bool lastAspectRatioCorrection = _aspectRatioCorrection;
 	switch (f) {
 	case OSystem::kFeatureCursorPalette:
 		_mouse->setCursorPaletteDisabled(!enable);
@@ -1331,6 +1329,6 @@ void DCAltGraphicsManager::translateMouse(Common::Event &event, int dx, int dy) 
 	warpMouse(event.mouse.x, event.mouse.y);
 }
 
-bool DCAltGraphicsManager::vgaModeAspectRatioCorrection() {
+bool DCAltGraphicsManager::vgaModeAspectRatioCorrection() const {
 	return _vga && ConfMan.getBool("dcalt_vga_mode_aspect_ratio");
 }

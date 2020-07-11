@@ -143,7 +143,7 @@ Common::SeekableReadStream *OSystem_DCAlt::createConfigReadStream() {
 	Common::SeekableReadStream *stream;
 	maple_device_t *dev;
 	vmu_pkg_t pkg;
-	const byte *buf;
+	byte *buf;
 	int icon_size, ec_size, hdr_size;
 	int size;
 	int ret;
@@ -161,10 +161,9 @@ Common::SeekableReadStream *OSystem_DCAlt::createConfigReadStream() {
 
 	dev = maple_enum_type(0, MAPLE_FUNC_MEMCARD);
 	if (dev && (dev->info.functions & MAPLE_FUNC_MEMCARD)) {
-		ret = vmufs_read(dev, "scummvm.ini",
-				 &buf, &size);
+		ret = vmufs_read(dev, "scummvm.ini", (void **)&buf, &size);
 		if (ret == 0) {
-			vmu_pkg_parse(buf, &pkg);
+			vmu_pkg_parse((uint8 *)buf, &pkg);
 			_configLocation = 
 				Common::String("/vmu/") +
 				Common::String(dev->port + 'a') +
@@ -635,7 +634,7 @@ void OSystem_DCAlt::initBackend() {
 
 	// Not entirely sure what the ratio between snd_stream_alloc and
 	// memalign's sizes should be...
-	_stream_buf = memalign(32, SND_STREAM_BUFFER_MAX);
+	_stream_buf = (uint8 *)memalign(32, SND_STREAM_BUFFER_MAX);
 	snd_stream_init();
 	_stream = snd_stream_alloc(soundStreamCallback, SND_STREAM_BUFFER_MAX / 4);
 	((Audio::MixerImpl *)_mixer)->setReady(true);
@@ -699,7 +698,8 @@ bool OSystem_DCAlt::hasFeature(Feature f) {
 
 bool OSystem_DCAlt::pollEvent(Common::Event &event) {
 	Common::StackLock lock(*_eventMutex);
-	DCAltGraphicsManager *graphicsManager = _graphicsManager;
+	DCAltGraphicsManager *graphicsManager =
+	    (DCAltGraphicsManager *)_graphicsManager;
 
 	// This doesn't belong here but has problems when done in a different
 	// thread.

@@ -11,7 +11,6 @@ untested.  Please do not use this with any filesystems or VMUs you care about
 until more testing has been done.  It is probably also a good idea to take
 frequent backups of saved games for now.
 
-
 ## Dreamcast hardware support
 
 This backend supports unmodified Dreamcasts - it can load games from CD and
@@ -19,28 +18,32 @@ store configuration and save files on VMUs.
 
 It also supports some additional hardware and modifications:
 
-  * An SD card attached to the SCIF port can be used for game data and for
-    configuration and save files.
-  * An ATA drive attached to the G1 bus can be used for game data and for
-    configuration and save files.
-  * scummvm.ini and saved games can be written to VMU, SD card, or ATA drive
-    (see "Saved games" and "scummvm.ini paths" below).
-  * It can output MIDI over a Dreamcast MIDI Interface Cable or the AICA MIDI
-    out port so an external synth, like an MT-32, can be used.  The AICA MIDI
-    signals are available on the G2 port, so a [MIDI connector can be added to
-    a Dreamcast modem](
-    https://tsowell.github.io/2020/07/09/dreamcast-aici-midi.html).
-  * It can change VGA modes to output a 320x200 image so that the display can
-    handle the vertical scaling.  (see the "VGA options" section below).
-  * It supports Dreamcasts with either 16MB or [32MB system RAM](
-    https://tsowell.github.io/2020/06/21/dreamcast-32mb-ram-upgrade.html)
+* An SD card attached to the SCIF port can be used for game data and for
+  configuration and save files.
+
+* An ATA drive attached to the G1 bus can be used for game data and for
+  configuration and save files.
+
+* scummvm.ini and saved games can be written to VMU, SD card, or ATA drive
+  (see "Saved games" and "scummvm.ini paths" below).
+
+* It can output MIDI over a Dreamcast MIDI Interface Cable or the AICA MIDI
+  out port so an external synth, like an MT-32, can be used.  The AICA MIDI
+  signals are available on the G2 port, so a [MIDI connector can be added to
+  a Dreamcast modem](
+  https://tsowell.github.io/2020/07/09/dreamcast-aici-midi.html).
+
+* It can change VGA modes to output a 320x200 image so that the display can
+  handle the vertical scaling.  (see the "VGA options" section below).
+
+* It supports Dreamcasts with either 16MB or [32MB system RAM](
+  https://tsowell.github.io/2020/06/21/dreamcast-32mb-ram-upgrade.html)
 
 Talkies run okay from SD card, but there can be slight delays whenever samples
 are loaded.  There are no noticeable delays from a CF card connected via ATA.
 
 KallistiOS only updates the first superblock on a FAT filesystem, so it's best
 to use "mkfs.vfat -f 1" when creating a FAT filesystem for use with it.
-
 
 ## Usage
 
@@ -59,40 +62,37 @@ The only way you can do anything like that with this backend is by compiling
 ScummVM with a static plugin or by storing the plugins on an SD card or ATA
 drive.
 
-
 ### Burning a CD from a release
 
-1. If you want to include any game files on your CD, add them to dcalt-dist/cd.
+ 1. If you want to include any game files on your CD, add them to dcalt-dist/cd.
 
-2. Remove any unwanted plugins from dcalt-dist/cd/plugins.
+ 2. Remove any unwanted plugins from dcalt-dist/cd/plugins.
 
-3. Take a look at dcalt-dist/burn.sh before running it.  You might need to
-change "dev=/dev/cdrom" to your CD drive's device path.
+ 3. Take a look at dcalt-dist/burn.sh before running it.  You might need to
+ change "dev=/dev/cdrom" to your CD drive's device path.
 
-4. Run dcalt-dist/burn.sh:
+ 4. Run dcalt-dist/burn.sh:
 
-       $ cd dcalt-dist
-       $ ./burn.sh
-
+      $ cd dcalt-dist
+      $ ./burn.sh
 
 ### Controller button mapping
 
 The button mapping is based mostly on the SDL backend button mapping.
 
-  * A: Left mouse button
-  * Right trigger + A: Virtual keyboard
-  * B: Right mouse button
-  * Right trigger + B: Predictive input dialog
-  * X: Period
-  * Right trigger + X: Space
-  * Y: Escape
-  * Right trigger + Y: Return
-  * Start: ScummVM in game menu
-  * Left trigger: Game menu
-  * Right trigger: Shift
-  * Up/Down/Left/Right: Numeric keyboard 8, 2, 4, 6
-  * Right trigger + Up/Down/Left/Right: Numeric keyboard 9, 1, 7, 3
-
+* A: Left mouse button
+* Right trigger + A: Virtual keyboard
+* B: Right mouse button
+* Right trigger + B: Predictive input dialog
+* X: Period
+* Right trigger + X: Space
+* Y: Escape
+* Right trigger + Y: Return
+* Start: ScummVM in game menu
+* Left trigger: Game menu
+* Right trigger: Shift
+* Up/Down/Left/Right: Numeric keyboard 8, 2, 4, 6
+* Right trigger + Up/Down/Left/Right: Numeric keyboard 9, 1, 7, 3
 
 ### Saved games
 
@@ -109,27 +109,25 @@ VMU saved games created in this backend are not compatible with the official
 Dreamcast backend, and vice versa.  backends/platform/saves.h has more
 information on how long filename support is implemented for VMUs.
 
-
 ### scummvm.ini paths
 
 ScummVM tries to read scummvm.ini from the following locations:
 
 Reading priority:
-  1. /sd/scummvm/scummvm.ini
-  2. /ata/scummvm/scummvm.ini
-  3. /vmu/*/scummvm.ini
-  4. /cd/scummvm/scummvm.ini
+ 1. /sd/scummvm/scummvm.ini
+ 2. /ata/scummvm/scummvm.ini
+ 3. /vmu/*/scummvm.ini
+ 4. /cd/scummvm/scummvm.ini
 
 Writing priority:
-  1. The path from which scummvm.ini was originally read (if writable)
-  2. /sd/scummvm/scummvm.ini
-  3. /ata/scummvm/scummvm.ini
-  4. /vmu/*/scummvm.ini
+ 1. The path from which scummvm.ini was originally read (if writable)
+ 2. /sd/scummvm/scummvm.ini
+ 3. /ata/scummvm/scummvm.ini
+ 4. /vmu/*/scummvm.ini
 
 It prefers SD card and ATA because they can be easily edited on a computer
 later.  SD card is the highest priority because it is (probably) the easiest of
 the two to physically remove.
-
 
 ### VGA options
 
@@ -153,7 +151,6 @@ signal when outputing a 320x200 signal.  The Dreamcast's RAMDAC only supports
 negative polarity, so this will only display an image on Dreamcasts that have
 been modified to force the RAMDAC vsync negative.  This is useful for driving
 older monitors that depend on sync polarity to determine video resolution.
-
 
 ## Building from source
 

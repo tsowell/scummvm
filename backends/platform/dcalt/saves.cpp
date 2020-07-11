@@ -125,16 +125,17 @@ VMUSaveFileWriteStream::VMUSaveFileWriteStream(
 	ec_size = vmu_eyecatch_size(_pkg.eyecatch_type);
 	_hdr_size = sizeof(struct vmu_hdr) + icon_size + ec_size;
 
-	_pkg.data = (const uint8 *)malloc(free_bytes - _hdr_size);
+	_data = (uint8 *)malloc(free_bytes - _hdr_size);
 
 	// Save preceded by offset and long filename with null terminator
 	save_offset = sizeof(uint32) + _longFilename.size() + 1;
 
-	memcpy(_pkg.data, &save_offset, sizeof(uint32));
-	strcpy(((char *)_pkg.data) + sizeof(uint32), _longFilename.c_str());
+	memcpy(_data, &save_offset, sizeof(uint32));
+	strcpy(((char *)_data) + sizeof(uint32), _longFilename.c_str());
 
-	_saveBuf = _pkg.data + save_offset;
+	_saveBuf = _data + save_offset;
 
+	_pkg.data = _data;
 	_pkg.data_len = save_offset;
 
 	_stream = new Common::MemoryWriteStream(
@@ -147,7 +148,7 @@ VMUSaveFileWriteStream::~VMUSaveFileWriteStream() {
 	int ret;
 
 	if (_stream->err()) {
-		free(_pkg.data);
+		free(_data);
 		free(_stream);
 		return;
 	}
@@ -156,14 +157,15 @@ VMUSaveFileWriteStream::~VMUSaveFileWriteStream() {
 
 	ret = vmu_pkg_build(&_pkg, &buf, &bufSize);
 	if (ret < 0) {
+		free(_data);
 		free(_stream);
-		free((void *)_pkg.data);
+		return;
 	}
 
 	vmufs_write(_dev, _shortFilename.c_str(),
 	            buf, bufSize, VMUFS_OVERWRITE);
 
-	free(_pkg.data);
+	free(_data);
 	free(_stream);
 
 	VMUSaveFile *save = new VMUSaveFile(buf, bufSize, _shortFilename);
@@ -195,7 +197,7 @@ VMUSaveFile::VMUSaveFile(
 
 void VMUSaveFile::init(
     uint8 *buf, int size, const Common::String &shortFilename) {
-	uint32 *save_offset;
+	const uint32 *save_offset;
 
 	_shortFilename = shortFilename;
 
@@ -205,7 +207,7 @@ void VMUSaveFile::init(
 
 	vmu_pkg_parse(_buf, &_pkg);
 
-	save_offset = (uint32 *)_pkg.data;
+	save_offset = (const uint32 *)_pkg.data;
 	_saveBuf = _pkg.data + *save_offset;
 
 	_saveSize = _pkg.data_len - (_saveBuf - _pkg.data);
@@ -312,11 +314,13 @@ Common::OutSaveFile *DCAltSaveFileManager::openForSaving(
 
 		sf = new VMUSaveFileWriteStream(
 		             this, dev, shortFilename, filename);
-		return Common::wrapCompressedWriteStream(sf);
+		return (Common::OutSaveFile *)
+		    Common::wrapCompressedWriteStream(sf);
         } else {
-                VMUSaveFileWriteStream *sf =
+                VMUSaveFileWriteStream *sf = (VMUSaveFileWriteStream *)
 		    file->_value.createWriteStream(this, dev);
-                return Common::wrapCompressedWriteStream(sf);
+                return (Common::OutSaveFile *)
+		    Common::wrapCompressedWriteStream(sf);
         }
 }
 
@@ -494,10 +498,11 @@ VMUConfigFileWriteStream::VMUConfigFileWriteStream(
 	ec_size = vmu_eyecatch_size(_pkg.eyecatch_type);
 	_hdr_size = sizeof(struct vmu_hdr) + icon_size + ec_size;
 
-	_pkg.data = (const uint8 *)malloc(free_bytes - _hdr_size);
+	_data = (uint8 *)malloc(free_bytes - _hdr_size);
 
-	_saveBuf = _pkg.data;
+	_saveBuf = _data;
 
+	_pkg.data = _data;
 	_pkg.data_len = 0;
 
 	_stream = new Common::MemoryWriteStream(
@@ -510,7 +515,7 @@ VMUConfigFileWriteStream::~VMUConfigFileWriteStream() {
 	int ret;
 
 	if (_stream->err()) {
-		free(_pkg.data);
+		free(_data);
 		free(_stream);
 		return;
 	}
@@ -519,14 +524,15 @@ VMUConfigFileWriteStream::~VMUConfigFileWriteStream() {
 
 	ret = vmu_pkg_build(&_pkg, &buf, &bufSize);
 	if (ret < 0) {
+		free(_data);
 		free(_stream);
-		free((void *)_pkg.data);
+		return;
 	}
 
 	vmufs_write(_dev, _filename.c_str(),
 	            buf, bufSize, VMUFS_OVERWRITE);
 
-	free(_pkg.data);
+	free(_data);
 	free(_stream);
 
 	free(buf);

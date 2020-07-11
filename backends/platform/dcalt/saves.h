@@ -95,6 +95,7 @@ private:
 	Common::String _longFilename;
 	maple_device_t *_dev;
 	vmu_pkg_t _pkg;
+	uint8 *_data;
 	int _hdr_size;
 	uint8 *_saveBuf;
 };
@@ -182,6 +183,7 @@ private:
 	Common::String _filename;
 	maple_device_t *_dev;
 	vmu_pkg_t _pkg;
+	uint8 *_data;
 	int _hdr_size;
 	uint8 *_saveBuf;
 };
