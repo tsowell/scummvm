@@ -326,7 +326,7 @@ static void keyboardEvent(
 		else if (event.kbd.keycode == Common::KEYCODE_CAPSLOCK) {
 			event.kbd.flags ^= Common::KBD_CAPS;
 		}
-		else if (event.kbd.keycode == Common::KEYCODE_CAPSLOCK) {
+		else if (event.kbd.keycode == Common::KEYCODE_SCROLLOCK) {
 			event.kbd.flags ^= Common::KBD_SCRL;
 		}
 	}
