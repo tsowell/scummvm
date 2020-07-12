@@ -58,7 +58,11 @@ bool SHDLObject::relocate(Elf32_Off offset, Elf32_Word size, byte *relSegment) {
 		switch (REL_TYPE(rel[i].r_info)) {
 		case R_SH_DIR32:
 			if (sym->st_shndx != SHN_ABS) {
-				*src += relSegment;
+				// Some of these may not be aligned, but I'm
+				// only aware of this happening with the ultima
+				// engine which at this time is still unstable.
+				WRITE_UINT32(src,
+				             READ_UINT32(src) + relSegment);
 			}
 			break;
 		default:
