@@ -3741,6 +3741,10 @@ case $_backend in
 		append_var DEFINES "-DSCUMMVM_DONT_DEFINE_TYPES"
                 append_var FLAC_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include"
                 append_var FLAC_LIBS "-lFLAC -lm ${KOS_LIBS}"
+                append_var JPEG_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include/jpeg"
+                append_var JPEG_LIBS "-ljpeg -lm ${KOS_LIBS}"
+                append_var PNG_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include/png"
+                append_var PNG_LIBS "-lpng -lm ${KOS_LIBS}"
 		append_var MAD_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include/mad"
 		append_var MAD_LIBS "${KOS_LIBS}"
 		append_var ZLIB_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include/zlib"
@@ -3748,6 +3752,10 @@ case $_backend in
 		append_var CFLAGS "${KOS_CFLAGS}"
 		append_var CXXFLAGS "${KOS_CFLAGS}"
 		append_var LDFLAGS "${KOS_LDFLAGS}"
+		append_var FREETYPE2_LIBS "-lfreetype ${KOS_LIBS}"
+		append_var FREETYPE2_CFLAGS "${KOS_CFLAGS} -I${KOS_PORTS}/include/freetype2"
+		append_var FREETYPE2_STATIC_LIBS "-lfreetype ${KOS_LIBS}"
+		_freetype_found="true"
 		if test "$_dynamic_modules" = yes ; then
 			append_var LDFLAGS "-Wl,--no-gc-sections"
 		fi
@@ -3885,7 +3893,13 @@ append_var MODULES "backends/platform/$_backend"
 #
 echocheck "pkg-config"
 _pkg_config=no
-command -v $_pkgconfig >/dev/null 2>&1 && _pkg_config=yes
+case $_backend in
+	dcalt)
+		;;
+	*)
+		command -v $_pkgconfig >/dev/null 2>&1 && _pkg_config=yes
+		;;
+esac
 echo "$_pkg_config"
 
 if test "$_pkg_config" = yes && test -n "$_host" && test -z "$PKG_CONFIG_LIBDIR"; then
