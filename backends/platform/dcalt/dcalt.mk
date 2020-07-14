@@ -21,6 +21,7 @@ dcalt-dist: all
         sed -e 's/[@]VERSION[@]/'"$$ver"/ -e 's/[@]DATE[@]/$(shell date '+%Y%m%d')/' < $(srcdir)/backends/platform/dcalt/ip.txt.in > dcalt-dist/ip.txt
 	IP_TEMPLATE_FILE=$(srcdir)/backends/platform/dcalt/IP.TMPL $(MAKEIP) dcalt-dist/ip.txt dcalt-dist/IP.BIN
 	$(CP) $(srcdir)/backends/platform/dcalt/burn.sh dcalt-dist
+	$(CP) $(srcdir)/backends/platform/dcalt/README.md dcalt-dist
 ifdef DIST_FILES_THEMES
 	$(MKDIR) dcalt-dist/cd/themes
 	$(CP) $(DIST_FILES_THEMES) dcalt-dist/cd/themes
@@ -36,6 +37,7 @@ endif
 ifdef DIST_FILES_DOCS
 	$(MKDIR) dcalt-dist/cd/docs
 	$(CP) $(DIST_FILES_DOCS) dcalt-dist/cd/docs
+	$(CP) $(srcdir)/backends/platform/dcalt/README.md dcalt-dist/cd/docs/README.DCALT.md
 endif
 ifeq ($(DYNAMIC_MODULES),1)
 	$(MKDIR) dcalt-dist/cd/plugins
