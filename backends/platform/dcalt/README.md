@@ -11,6 +11,31 @@ untested.  Please do not use this with any filesystems or VMUs you care about
 until more testing has been done.  It is probably also a good idea to take
 frequent backups of saved games for now.
 
+   * [Dreamcast hardware support](#dreamcast-hardware-support)
+   * [Usage](#usage)
+      * [Notes on burning a CD](#notes-on-burning-a-cd)
+      * [Burning a CD from a release](#burning-a-cd-from-a-release)
+         * [Prepare the cd directory](#prepare-the-cd-directory)
+         * [Burn a CD (Unix)](#burn-a-cd-unix)
+         * [Burn a CD (Windows)](#burn-a-cd-windows)
+      * [Controller button mapping](#controller-button-mapping)
+      * [Saved games](#saved-games)
+      * [scummvm.ini paths](#scummvmini-paths)
+      * [VGA options](#vga-options)
+   * [Building from source](#building-from-source)
+      * [Get the (custom) KallistiOS source](#get-the-custom-kallistios-source)
+      * [Build the toolchain](#build-the-toolchain)
+      * [Configure KallistiOS/environ.sh](#configure-kallistiosenvironsh)
+      * [Build KallistiOS](#build-kallistios)
+      * [Build zlib](#build-zlib)
+      * [Build FLAC](#build-flac)
+      * [Build libjpeg](#build-libjpeg)
+      * [Build libpng](#build-libpng)
+      * [Build libmad](#build-libmad)
+      * [Build freetype](#build-freetype)
+      * [Build makeip](#build-makeip)
+      * [Build ScummVM](#build-scummvm)
+
 ## Dreamcast hardware support
 
 This backend supports unmodified Dreamcasts - it can load games from CD and
