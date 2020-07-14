@@ -54,7 +54,8 @@ one-at-a-time to find one that will work with the game.  If you're loading the
 plugins from the CD, this can take a long time - like 2 minutes.  You can avoid
 this by keeping only a small number of plugins on your CD image or by putting
 the plugins on an SD card or ATA drive.  You can edit pluginspath in
-scummvm.ini or in the Options menu to tell ScummVM where to look for plugins.
+scummvm.ini or in the Options menu to tell ScummVM to look for plugins in an
+alternate path.
 
 The official Dreamcast backend has a great mechanism for caching plugins that
 allows you to swap the ScummVM disc for a game disc and load games from it.
@@ -64,17 +65,48 @@ drive.
 
 ### Burning a CD from a release
 
- 1. If you want to include any game files on your CD, add them to dcalt-dist/cd.
+#### Prepare the cd directory
 
- 2. Remove any unwanted plugins from dcalt-dist/cd/plugins.
+ 1. Download and extract [the latest release tarball](https://github.com/tsowell/scummvm-dreamcast/releases/latest).
+    It contains a dcalt-dist directory.  Some of the contents are:
 
- 3. Take a look at dcalt-dist/burn.sh before running it.  You might need to
+    * dcalt-dist/README.md: this file
+    * dcalt-dist/scummvm.elf: the main ScummVM binary (ELF)
+    * dcalt-dist/scummvm.bin: the main ScummVM binary (unscrambled)
+    * dcalt-dist/cd: files for the root directory of a CD
+    * dcalt-dist/cd/scummvm.bin: the main ScummVM binary (scrambled)
+    * dcalt-dist/cd/plugins: plugins for each ScummVM engine
+    * dcalt-dist/IP.BIN: [CD bootstrap](https://mc.pp.se/dc/ip.bin.html)
+
+ 2. If you want to include any game files on your CD, add them to dcalt-dist/cd.
+
+ 3. Remove any unwanted plugins from dcalt-dist/cd/plugins.
+
+#### Burn a CD (Unix)
+
+ 1. Take a look at dcalt-dist/burn.sh before running it.  You might need to
  change "dev=/dev/cdrom" to your CD drive's device path.
 
- 4. Run dcalt-dist/burn.sh:
+ 2. Run dcalt-dist/burn.sh:
 
-      $ cd dcalt-dist
-      $ ./burn.sh
+        $ cd dcalt-dist
+        $ ./burn.sh
+
+#### Burn a CD (Windows)
+
+ 1. Download mkisofs.exe and cdi4dc.exe to the dcalt-dist directory.
+    You can use these links to the [DreamSDK](https://www.dreamsdk.org/) repo:
+
+    * [mkisofs.exe](https://github.com/dreamsdk/system-objects/raw/master/msys/opt/dreamsdk/helpers/mkisofs.exe)
+    * [cdi4dc.exe](https://github.com/dreamsdk/system-objects/raw/master/msys/opt/dreamsdk/helpers/cdi4dc.exe)
+
+ 2. Create a CDI file:
+
+        > cd dcalt-dist
+        > mkisofs -C 0,11702 -l -G IP.BIN -o scummvm.iso cd
+        > cdi4dc scummvm.iso scummvm.cdi
+
+ 3. Use your favorite cd-burning application to burn scummvm.cdi to a CD.
 
 ### Controller button mapping
 
@@ -256,15 +288,3 @@ variable in backends/platform/dcalt/dcalt.mk.
     $ make dcalt-dist
 
 This produces CD files in dcalt-dist/cd and IP.BIN in dcalt-dist.
-
-### Burn CD
-
-If you want to include any game files on your CD, add them to dcalt-dist/cd
-now.
-
-Take a look at dcalt-dist/burn.sh before running it.  You might need to change
-"dev=/dev/cdrom" to your CD drive's device path.
-
-    $ cd scummvm-dreamcast/dcalt-dist
-    $ ./burn.sh
-
