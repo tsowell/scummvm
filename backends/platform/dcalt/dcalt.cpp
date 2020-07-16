@@ -629,7 +629,7 @@ void OSystem_DCAlt::initBackend() {
 
 	_timerThread = thd_create(0, timerThreadFunction, NULL);
 
-	_mixer = new Audio::MixerImpl(32000);
+	_mixer = new Audio::MixerImpl(44100);
 	((Audio::MixerImpl *)_mixer)->setReady(false);
 
 	// Not entirely sure what the ratio between snd_stream_alloc and
@@ -638,7 +638,7 @@ void OSystem_DCAlt::initBackend() {
 	snd_stream_init();
 	_stream = snd_stream_alloc(soundStreamCallback, SND_STREAM_BUFFER_MAX / 4);
 	((Audio::MixerImpl *)_mixer)->setReady(true);
-	snd_stream_start(_stream, 32000, 1);
+	snd_stream_start(_stream, 44100, 1);
 	_audioThread = thd_create(0, audioThreadFunction, NULL);
 
 	_eventMutex = new Common::Mutex();
