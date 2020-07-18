@@ -35,6 +35,20 @@
 #define PF_ARGB4444 (Graphics::PixelFormat(2, 4, 4, 4, 4, 8, 4, 0, 12))
 #define PF_CLUT8 (Graphics::PixelFormat::createFormatCLUT8())
 
+static const OSystem::GraphicsMode _supportedGraphicsModes[] = {
+	{
+		"pvr_ar_correction",
+		"Scale to 320x240 when aspect ratio correction is enabled",
+		GFX_PVR_AR_CORRECTION
+	},
+	{
+		"vga_ar_correction",
+		"Output 320x200 when aspect ratio correction is enabled",
+		GFX_VGA_AR_CORRECTION
+	},
+	{ 0, 0, 0 }
+};
+
 static int
 _to_texture_dimension(int x) {
 	if (x <= 8)
@@ -788,7 +802,8 @@ DCAltGraphicsManager::DCAltGraphicsManager() :
     _aspectRatioCorrection(false),
     _activeDomain(0),
     _screenFormat(PF_CLUT8),
-    _filteringMode(PVR_FILTER_NONE)
+    _filteringMode(PVR_FILTER_NONE),
+    _graphicsMode(getDefaultGraphicsMode())
 {
 	_vga = vid_check_cable() == CT_VGA;
 	initOverlay(640, 480);
@@ -864,6 +879,23 @@ bool DCAltGraphicsManager::getFeatureState(OSystem::Feature f) const {
 		return false;
 		break;
 	}
+}
+
+const OSystem::GraphicsMode *DCAltGraphicsManager::getSupportedGraphicsModes() const {
+	return _supportedGraphicsModes;
+}
+
+int DCAltGraphicsManager::getDefaultGraphicsMode() const {
+	return GFX_PVR_AR_CORRECTION;
+}
+
+bool DCAltGraphicsManager::setGraphicsMode(int mode) {
+	_graphicsMode = mode;
+	return true;
+}
+
+int DCAltGraphicsManager::getGraphicsMode() const {
+	return _graphicsMode;
 }
 
 void DCAltGraphicsManager::showOverlay() {
@@ -1330,5 +1362,5 @@ void DCAltGraphicsManager::translateMouse(Common::Event &event, int dx, int dy) 
 }
 
 bool DCAltGraphicsManager::vgaModeAspectRatioCorrection() const {
-	return _vga && ConfMan.getBool("dcalt_vga_mode_aspect_ratio");
+	return _vga && (_graphicsMode == GFX_VGA_AR_CORRECTION);
 }

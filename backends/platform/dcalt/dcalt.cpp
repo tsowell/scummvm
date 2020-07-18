@@ -607,7 +607,6 @@ void *OSystem_DCAlt::soundStreamCallback(
 }
 
 void OSystem_DCAlt::initBackend() {
-	ConfMan.registerDefault("dcalt_vga_mode_aspect_ratio", false);
 	ConfMan.registerDefault("dcalt_vga_25175", false);
 	ConfMan.registerDefault("dcalt_vga_polarity", false);
 	if (!ConfMan.hasKey("savepath", 0))

@@ -193,10 +193,12 @@ The backend has some custom options for controlling VGA output.
 Please check my work before using any of these with a CRT monitor!  Certain
 very old CRTs can be permanently damaged by bad video timing.
 
-If dcalt_vga_mode_aspect_ratio is set to true in scummvm.ini, aspect mode
-correction will enable a true 320x200 video signal for 320x200 games.  This
-allows the display (preferably a CRT) to do the vertical scaling instead of
-doing it in software on the Dreamcast.
+The default graphics mode is "Scale to 320x240 when aspect ratio correction is
+enabled" which performs aspect ratio correction by scaling 320x200 graphics to
+320x240.  If the graphics mode is set to "Output 320x200 when aspect ratio
+correction is enabled", aspect mode correction enables a 320x200 video signal
+for 320x200 graphics.  This allows the display (preferably a CRT) to do the
+vertical scaling instead of doing it on the Dreamcast.
 
 If dcalt_vga_25175 is enabled, the Dreamcast will output VGA with standard
 video timing.  This requires a hardware modification to clock the GPU at 50.350

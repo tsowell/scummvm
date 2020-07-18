@@ -35,6 +35,11 @@
 
 #include "graphics/colormasks.h"
 
+enum {
+	GFX_PVR_AR_CORRECTION = 0,
+	GFX_VGA_AR_CORRECTION
+};
+
 class PVRSurface {
 public:
 	virtual ~PVRSurface() {};
@@ -171,6 +176,11 @@ public:
 	void setFeatureState(OSystem::Feature f, bool enable);
 	bool getFeatureState(OSystem::Feature f) const;
 
+	virtual const OSystem::GraphicsMode *getSupportedGraphicsModes() const override;
+	virtual int getDefaultGraphicsMode() const override;
+	virtual bool setGraphicsMode(int mode) override;
+	virtual int getGraphicsMode() const override;
+
 #ifdef USE_RGB_COLOR
 	Graphics::PixelFormat getScreenFormat() const override;
 	Common::List<Graphics::PixelFormat> getSupportedFormats() const override;
@@ -239,6 +249,7 @@ private:
 	bool _aspectRatioCorrection;
 	Graphics::PixelFormat _screenFormat;
 	int _filteringMode;
+	int _graphicsMode;
 };
 
 #endif
