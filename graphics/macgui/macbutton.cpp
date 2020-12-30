@@ -34,30 +34,29 @@
 namespace Graphics {
 
 MacButton::MacButton(MacButtonType buttonType, TextAlign textAlignment, MacWidget *parent, int x, int y, int w, int h, MacWindowManager *wm, const Common::U32String &s, const MacFont *macFont, int fgcolor, int bgcolor) :
-	MacText(parent, x, y, w, h, wm, s, macFont, fgcolor, bgcolor, w, textAlignment) {
+	MacText(parent, x, y, w, h, wm, s, macFont, fgcolor, bgcolor, w, textAlignment), _pd(Graphics::MacPlotData(_composeSurface, nullptr, &_wm->getPatterns(), 1, 0, 0, 1, 0, true)) {
 
 	_buttonType = buttonType;
 
-	int offset;
 	switch (buttonType) {
 	case kCheckBox:
-		offset = 16;
+		_alignOffset.x += 16;
+		_dims.right += 16;
 		break;
 	case kRound:
-		offset = 4;
-		_dims.top -= 2;
-		_dims.bottom += 2;
+		_alignOffset.x += 2;
 		_alignOffset.y += 2;
+		_dims.right += 2;
+		_dims.bottom += 4;
 		break;
 	case kRadio:
-		offset = 16;
+		_alignOffset.x += 16;
+		_dims.right += 16;
 		break;
 	}
 
-	_alignOffset.x += offset;
-	_dims.right += offset;
-	_composeSurface->create(_dims.width(), _dims.height());
-	_maskSurface->create(_dims.width(), _dims.height());
+	_composeSurface->create(_dims.width(), _dims.height(), _wm->_pixelformat);
+	_composeSurface->clear(_bgcolor);
 }
 
 void MacButton::setActive(bool active) {
@@ -75,14 +74,14 @@ void MacButton::invertOuter() {
 	switch (_buttonType) {
 	case kCheckBox: {
 		Common::Rect c = Common::Rect(r.left + 1, r.top + 3, r.left + 9, r.top + 11);
-		Graphics::drawRect(c, 0, Graphics::macInvertPixel, _composeSurface);
+		Graphics::drawRect(c, 0, _wm->getDrawPixel(), &_pd);
 	}
 		break;
 	case kRound:
-		Graphics::drawRoundRect(r, 4, 0, true, Graphics::macInvertPixel, _composeSurface);
+		Graphics::drawRoundRect(r, 4, 0, true, _wm->getDrawPixel(), &_pd);
 		break;
 	case kRadio:
-		Graphics::drawEllipse(r.left + 1, r.top + 3, r.left + 10, r.top + 12, 0, false, Graphics::macInvertPixel, _composeSurface);
+		Graphics::drawEllipse(r.left + 1, r.top + 3, r.left + 10, r.top + 12, 0, false, _wm->getDrawPixel(), &_pd);
 		break;
 	}
 
@@ -94,14 +93,14 @@ void MacButton::invertInner() {
 
 	switch (_buttonType) {
 	case kCheckBox:
-		Graphics::drawLine(r.left + 1, r.top + 3, r.left + 9, r.top + 11, 0, Graphics::macInvertPixel, _composeSurface);
-		Graphics::drawLine(r.left + 1, r.top + 11, r.left + 9, r.top + 3, 0, Graphics::macInvertPixel, _composeSurface);
-		Graphics::macInvertPixel(5, 7, 0, _composeSurface);
+		Graphics::drawLine(r.left + 1, r.top + 3, r.left + 9, r.top + 11, 0, _wm->getDrawPixel(), &_pd);
+		Graphics::drawLine(r.left + 1, r.top + 11, r.left + 9, r.top + 3, 0, _wm->getDrawPixel(), &_pd);
+		(_wm->getDrawPixel())(5, 7, 0, &_pd);
 		break;
 	case kRound:
 		break;
 	case kRadio:
-		Graphics::drawEllipse(r.left + 3, r.top + 5, r.left + 8, r.top + 10, 0, true, Graphics::macInvertPixel, _composeSurface);
+		Graphics::drawEllipse(r.left + 3, r.top + 5, r.left + 8, r.top + 10, 0, true, _wm->getDrawPixel(), &_pd);
 		break;
 	}
 
@@ -112,27 +111,25 @@ bool MacButton::draw(bool forceRedraw) {
 	if ((!_contentIsDirty && !forceRedraw) || _active)
 		return false;
 
-	_maskSurface->clear(1);
 	MacText::draw();
 
 	Common::Rect r(_dims.width() - 1, _dims.height() - 1);
-	Graphics::MacPlotData pd(_composeSurface, _maskSurface, &_wm->getPatterns(), 1, 0, 0, 1, 0);
+	Graphics::MacPlotData pd(_composeSurface, nullptr, &_wm->getPatterns(), 1, 0, 0, 1, 0);
 
 	switch (_buttonType) {
 	case kCheckBox: {
 		Common::Rect c = Common::Rect(r.left, r.top + 2, r.left + 10, r.top + 2 + 10);
-		Graphics::drawRect(c, 0, Graphics::macDrawPixel, &pd);
+		Graphics::drawRect(c, 0, _wm->getDrawPixel(), &pd);
 		break;
 	}
 	case kRound:
-		Graphics::drawRoundRect(r, 4, 0, _active, Graphics::macDrawPixel, &pd);
+		Graphics::drawRoundRect(r, 4, 0, _active, _wm->getDrawPixel(), &pd);
 		break;
 	case kRadio:
-		Graphics::drawEllipse(r.left, r.top + 2, r.left + 11, r.top + 13, 0, false, Graphics::macDrawPixel, &pd);
+		Graphics::drawEllipse(r.left, r.top + 2, r.left + 11, r.top + 13, 0, false, _wm->getDrawPixel(), &pd);
 		break;
 	}
 
-	_contentIsDirty = false;
 	return true;
 }
 
@@ -140,7 +137,7 @@ bool MacButton::draw(ManagedSurface *g, bool forceRedraw) {
 	if (!MacButton::draw(forceRedraw))
 		return false;
 
-	g->transBlitFrom(*_composeSurface, _composeSurface->getBounds(), Common::Point(_dims.left - 2, _dims.top - 2), kColorGreen2);
+	g->transBlitFrom(*_composeSurface, _composeSurface->getBounds(), Common::Point(_dims.left - 2, _dims.top - 2), _wm->_colorGreen2);
 
 	return true;
 }
@@ -151,6 +148,8 @@ bool MacButton::processEvent(Common::Event &event) {
 		if (_wm->_mouseDown) {
 			if (_wm->_mode & kWMModeButtonDialogStyle)
 				return true;
+			else if (!_dims.contains(_wm->_lastClickPos))
+				return false;
 
 			setActive(true);
 		}

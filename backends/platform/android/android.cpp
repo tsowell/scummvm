@@ -56,6 +56,7 @@
 #include "common/config-manager.h"
 
 #include "backends/audiocd/default/default-audiocd.h"
+#include "backends/events/default/default-events.h"
 #include "backends/mutex/pthread/pthread-mutex.h"
 #include "backends/saves/default/default-saves.h"
 #include "backends/timer/default/default-timer.h"
@@ -140,7 +141,7 @@ OSystem_Android::~OSystem_Android() {
 	delete _timerManager;
 	_timerManager = 0;
 
-	deleteMutex(_event_queue_lock);
+	delete _event_queue_lock;
 
 	delete _savefileManager;
 	_savefileManager = 0;
@@ -316,7 +317,7 @@ void OSystem_Android::initBackend() {
 	// The key is thus registered to default to a "false" value
 	ConfMan.registerDefault("swap_menu_and_back", false);
 
-	ConfMan.setInt("autosave_period", 0);
+	ConfMan.registerDefault("autosave_period", 0);
 	ConfMan.setBool("FM_high_quality", false);
 	ConfMan.setBool("FM_medium_quality", true);
 
@@ -347,7 +348,7 @@ void OSystem_Android::initBackend() {
 	_mutexManager = new PthreadMutexManager();
 	_timerManager = new DefaultTimerManager();
 
-	_event_queue_lock = createMutex();
+	_event_queue_lock = new Common::Mutex();
 
 	gettimeofday(&_startTime, 0);
 
@@ -368,7 +369,10 @@ void OSystem_Android::initBackend() {
 
 	JNI::setReadyForEvents(true);
 
-	ModularBackend::initBackend();
+	_eventManager = new DefaultEventManager(this);
+	_audiocdManager = new DefaultAudioCDManager();
+
+	BaseBackend::initBackend();
 }
 
 bool OSystem_Android::hasFeature(Feature f) {
@@ -379,7 +383,7 @@ bool OSystem_Android::hasFeature(Feature f) {
 			f == kFeatureClipboardSupport) {
 		return true;
 	}
-	return ModularBackend::hasFeature(f);
+	return ModularGraphicsBackend::hasFeature(f);
 }
 
 void OSystem_Android::setFeatureState(Feature f, bool enable) {
@@ -399,7 +403,7 @@ void OSystem_Android::setFeatureState(Feature f, bool enable) {
 		JNI::showKeyboardControl(enable);
 		break;
 	default:
-		ModularBackend::setFeatureState(f, enable);
+		ModularGraphicsBackend::setFeatureState(f, enable);
 		break;
 	}
 }
@@ -413,7 +417,7 @@ bool OSystem_Android::getFeatureState(Feature f) {
 	case kFeatureOnScreenControl:
 		return ConfMan.getBool("onscreen_control");
 	default:
-		return ModularBackend::getFeatureState(f);
+		return ModularGraphicsBackend::getFeatureState(f);
 	}
 }
 
@@ -526,7 +530,7 @@ Common::String OSystem_Android::getSystemLanguage() const {
 }
 
 bool OSystem_Android::openUrl(const Common::String &url) {
-	return JNI::openUrl(url.c_str());
+	return JNI::openUrl(url);
 }
 
 bool OSystem_Android::hasTextInClipboard() {
@@ -551,6 +555,10 @@ Common::String OSystem_Android::getSystemProperty(const char *name) const {
 	int len = __system_property_get(name, value);
 
 	return Common::String(value, len);
+}
+
+char *OSystem_Android::convertEncoding(const char *to, const char *from, const char *string, size_t length) {
+	return JNI::convertEncoding(to, from, string, length);
 }
 
 #endif

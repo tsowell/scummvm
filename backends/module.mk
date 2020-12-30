@@ -158,6 +158,11 @@ ifdef USE_OPENGL
 MODULE_OBJS += \
 	graphics/openglsdl/openglsdl-graphics.o
 endif
+
+ifdef USE_DISCORD
+MODULE_OBJS += \
+	presence/discord/discord.o
+endif
 endif
 
 ifdef POSIX
@@ -235,6 +240,12 @@ MODULE_OBJS += \
 	midi/camd.o
 endif
 
+ifdef MORPHOS
+MODULE_OBJS += \
+	fs/morphos/morphos-fs.o \
+	fs/morphos/morphos-fs-factory.o
+endif
+
 ifdef RISCOS
 MODULE_OBJS += \
 	events/riscossdl/riscossdl-events.o \
@@ -255,11 +266,6 @@ endif
 ifdef USE_LINUXCD
 MODULE_OBJS += \
 	audiocd/linux/linux-audiocd.o
-endif
-
-ifeq ($(BACKEND),tizen)
-MODULE_OBJS += \
-	timer/tizen/timer.o
 endif
 
 ifeq ($(BACKEND),3ds)
@@ -310,17 +316,15 @@ MODULE_OBJS += \
 	fs/n64/romfsstream.o
 endif
 
+ifeq ($(BACKEND),null)
+MODULE_OBJS += \
+	mixer/null/null-mixer.o
+endif
+
 ifeq ($(BACKEND),openpandora)
 MODULE_OBJS += \
 	events/openpandora/op-events.o \
 	graphics/openpandora/op-graphics.o
-endif
-
-ifeq ($(BACKEND),ps2)
-MODULE_OBJS += \
-	fs/ps2/ps2-fs.o \
-	fs/ps2/ps2-fs-factory.o \
-	plugins/ps2/ps2-provider.o
 endif
 
 ifeq ($(BACKEND),psp)
@@ -347,11 +351,6 @@ MODULE_OBJS += \
 	events/samsungtvsdl/samsungtvsdl-events.o
 endif
 
-ifeq ($(BACKEND),webos)
-MODULE_OBJS += \
-	events/webossdl/webossdl-events.o
-endif
-
 ifeq ($(BACKEND),wii)
 MODULE_OBJS += \
 	fs/wii/wii-fs.o \
@@ -366,7 +365,7 @@ endif
 
 ifdef ENABLE_EVENTRECORDER
 MODULE_OBJS += \
-	mixer/nullmixer/nullsdl-mixer.o \
+	mixer/null/null-mixer.o \
 	saves/recorder/recorder-saves.o
 endif
 

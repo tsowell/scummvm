@@ -67,7 +67,9 @@
 #define CONT_RTRIG (1 << 16)
 #define CONT_LTRIG (1 << 17)
 
-class OSystem_DCAlt : public ModularBackend, Common::EventSource {
+class OSystem_DCAlt : public ModularGraphicsBackend,
+			     ModularMutexBackend,
+			     Common::EventSource {
 public:
 	OSystem_DCAlt(bool sd_mounted, bool ata_mounted);
 	virtual ~OSystem_DCAlt();
@@ -89,6 +91,8 @@ public:
 
 	virtual Common::SeekableReadStream *createConfigReadStream();
 	virtual Common::WriteStream *createConfigWriteStream();
+
+	virtual Audio::Mixer *getMixer();
 private:
 	static void *soundStreamCallback(
 	    snd_stream_hnd_t hnd, int smp_req, int *smp_recv);
@@ -110,6 +114,8 @@ private:
 	Common::Mutex *_eventMutex;
 	Common::Queue<Common::Event> _eventQueue;
 	Common::String _configLocation;
+protected:
+	Audio::MixerImpl *_mixer;
 };
 
 static Common::SeekableReadStream *_createReadStreamForFile(
@@ -255,6 +261,11 @@ Common::WriteStream *OSystem_DCAlt::createConfigWriteStream() {
 	return NULL;
 }
 
+Audio::Mixer *OSystem_DCAlt::getMixer() {
+	assert(_mixer);
+	return _mixer;
+}
+
 OSystem_DCAlt::OSystem_DCAlt(bool sd_mounted, bool ata_mounted) :
     _controller(NULL),
     _quitting(false),
@@ -291,7 +302,7 @@ OSystem_DCAlt::~OSystem_DCAlt() {
 }
 
 void *OSystem_DCAlt::audioThreadFunction(void *arg) {
-	OSystem_DCAlt *os = (OSystem_DCAlt *)g_system;
+	OSystem_DCAlt *os = dynamic_cast<OSystem_DCAlt *>(g_system);
 	while (!os->_quitting) {
 		snd_stream_poll(os->_stream);
 		thd_sleep(5);
@@ -301,7 +312,7 @@ void *OSystem_DCAlt::audioThreadFunction(void *arg) {
 }
 
 void *OSystem_DCAlt::timerThreadFunction(void *arg) {
-	OSystem_DCAlt *os = (OSystem_DCAlt *)g_system;
+	OSystem_DCAlt *os = dynamic_cast<OSystem_DCAlt *>(g_system);
 	while (!os->_quitting) {
 		DefaultTimerManager *tm =
 			(DefaultTimerManager *)g_system->getTimerManager();
@@ -435,7 +446,7 @@ void *OSystem_DCAlt::eventThreadFunction(void *arg) {
 	static uint16 lastMouseButtons[MAPLE_PORT_COUNT] = { 0 };
 	static uint8 lastMatrix[MAPLE_PORT_COUNT][MAX_KBD_KEYS] = { { 0 } };
 	static int lastFlags[MAPLE_PORT_COUNT] = { 0 };
-	OSystem_DCAlt *os = (OSystem_DCAlt *)g_system;
+	OSystem_DCAlt *os = dynamic_cast<OSystem_DCAlt *>(g_system);
 	int dx = 0, dy = 0;
 	Common::Event event;
 	uint32 changedButtons;
@@ -599,7 +610,7 @@ void *OSystem_DCAlt::eventThreadFunction(void *arg) {
 
 void *OSystem_DCAlt::soundStreamCallback(
     snd_stream_hnd_t hnd, int smp_req, int *smp_recv) {
-	OSystem_DCAlt *os = (OSystem_DCAlt *)g_system;
+	OSystem_DCAlt *os = dynamic_cast<OSystem_DCAlt *>(g_system);
 	Audio::MixerImpl *mixer = (Audio::MixerImpl *)os->_mixer;
 	mixer->mixCallback(os->_stream_buf, smp_req);
 	*smp_recv = smp_req;
@@ -643,7 +654,7 @@ void OSystem_DCAlt::initBackend() {
 	_eventMutex = new Common::Mutex();
 	_eventThread = thd_create(0, eventThreadFunction, NULL);
 
-	ModularBackend::initBackend();
+	BaseBackend::initBackend();
 }
 
 uint32 OSystem_DCAlt::getMillis(bool skipRecord) {

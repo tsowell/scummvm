@@ -1,4 +1,4 @@
-/* A Bison parser, made by GNU Bison 3.6.3.  */
+/* A Bison parser, made by GNU Bison 3.7.1.  */
 
 /* Bison interface for Yacc-like parsers in C
 
@@ -55,89 +55,92 @@ extern int yydebug;
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
     UNARY = 258,                   /* UNARY  */
-    CASTREF = 259,                 /* CASTREF  */
-    VOID = 260,                    /* VOID  */
-    VAR = 261,                     /* VAR  */
-    POINT = 262,                   /* POINT  */
-    RECT = 263,                    /* RECT  */
-    ARRAY = 264,                   /* ARRAY  */
-    OBJECT = 265,                  /* OBJECT  */
-    FIELDREF = 266,                /* FIELDREF  */
-    LEXERROR = 267,                /* LEXERROR  */
-    PARRAY = 268,                  /* PARRAY  */
-    INT = 269,                     /* INT  */
-    ARGC = 270,                    /* ARGC  */
-    ARGCNORET = 271,               /* ARGCNORET  */
-    THEENTITY = 272,               /* THEENTITY  */
-    THEENTITYWITHID = 273,         /* THEENTITYWITHID  */
-    THEMENUITEMENTITY = 274,       /* THEMENUITEMENTITY  */
-    THEMENUITEMSENTITY = 275,      /* THEMENUITEMSENTITY  */
-    FLOAT = 276,                   /* FLOAT  */
-    BLTIN = 277,                   /* BLTIN  */
-    FBLTIN = 278,                  /* FBLTIN  */
-    RBLTIN = 279,                  /* RBLTIN  */
-    THEFBLTIN = 280,               /* THEFBLTIN  */
-    ID = 281,                      /* ID  */
-    STRING = 282,                  /* STRING  */
-    HANDLER = 283,                 /* HANDLER  */
-    SYMBOL = 284,                  /* SYMBOL  */
-    ENDCLAUSE = 285,               /* ENDCLAUSE  */
-    tPLAYACCEL = 286,              /* tPLAYACCEL  */
-    tMETHOD = 287,                 /* tMETHOD  */
-    THEOBJECTPROP = 288,           /* THEOBJECTPROP  */
-    tDOWN = 289,                   /* tDOWN  */
-    tELSE = 290,                   /* tELSE  */
-    tELSIF = 291,                  /* tELSIF  */
-    tEXIT = 292,                   /* tEXIT  */
-    tGLOBAL = 293,                 /* tGLOBAL  */
-    tGO = 294,                     /* tGO  */
-    tGOLOOP = 295,                 /* tGOLOOP  */
-    tIF = 296,                     /* tIF  */
-    tIN = 297,                     /* tIN  */
-    tINTO = 298,                   /* tINTO  */
-    tMACRO = 299,                  /* tMACRO  */
-    tMOVIE = 300,                  /* tMOVIE  */
-    tNEXT = 301,                   /* tNEXT  */
-    tOF = 302,                     /* tOF  */
-    tPREVIOUS = 303,               /* tPREVIOUS  */
-    tPUT = 304,                    /* tPUT  */
-    tREPEAT = 305,                 /* tREPEAT  */
-    tSET = 306,                    /* tSET  */
-    tTHEN = 307,                   /* tTHEN  */
-    tTO = 308,                     /* tTO  */
-    tWHEN = 309,                   /* tWHEN  */
-    tWITH = 310,                   /* tWITH  */
-    tWHILE = 311,                  /* tWHILE  */
-    tFACTORY = 312,                /* tFACTORY  */
-    tOPEN = 313,                   /* tOPEN  */
-    tPLAY = 314,                   /* tPLAY  */
-    tINSTANCE = 315,               /* tINSTANCE  */
-    tGE = 316,                     /* tGE  */
-    tLE = 317,                     /* tLE  */
-    tEQ = 318,                     /* tEQ  */
-    tNEQ = 319,                    /* tNEQ  */
-    tAND = 320,                    /* tAND  */
-    tOR = 321,                     /* tOR  */
-    tNOT = 322,                    /* tNOT  */
-    tMOD = 323,                    /* tMOD  */
-    tAFTER = 324,                  /* tAFTER  */
-    tBEFORE = 325,                 /* tBEFORE  */
-    tCONCAT = 326,                 /* tCONCAT  */
-    tCONTAINS = 327,               /* tCONTAINS  */
-    tSTARTS = 328,                 /* tSTARTS  */
-    tCHAR = 329,                   /* tCHAR  */
-    tITEM = 330,                   /* tITEM  */
-    tLINE = 331,                   /* tLINE  */
-    tWORD = 332,                   /* tWORD  */
-    tSPRITE = 333,                 /* tSPRITE  */
-    tINTERSECTS = 334,             /* tINTERSECTS  */
-    tWITHIN = 335,                 /* tWITHIN  */
-    tTELL = 336,                   /* tTELL  */
-    tPROPERTY = 337,               /* tPROPERTY  */
-    tON = 338,                     /* tON  */
-    tENDIF = 339,                  /* tENDIF  */
-    tENDREPEAT = 340,              /* tENDREPEAT  */
-    tENDTELL = 341                 /* tENDTELL  */
+    VOID = 259,                    /* VOID  */
+    VAR = 260,                     /* VAR  */
+    POINT = 261,                   /* POINT  */
+    RECT = 262,                    /* RECT  */
+    ARRAY = 263,                   /* ARRAY  */
+    OBJECT = 264,                  /* OBJECT  */
+    LEXERROR = 265,                /* LEXERROR  */
+    PARRAY = 266,                  /* PARRAY  */
+    CASTREF = 267,                 /* CASTREF  */
+    FIELDREF = 268,                /* FIELDREF  */
+    CHUNKREF = 269,                /* CHUNKREF  */
+    INT = 270,                     /* INT  */
+    ARGC = 271,                    /* ARGC  */
+    ARGCNORET = 272,               /* ARGCNORET  */
+    THEENTITY = 273,               /* THEENTITY  */
+    THEENTITYWITHID = 274,         /* THEENTITYWITHID  */
+    THEMENUITEMENTITY = 275,       /* THEMENUITEMENTITY  */
+    THEMENUITEMSENTITY = 276,      /* THEMENUITEMSENTITY  */
+    FLOAT = 277,                   /* FLOAT  */
+    THEFUNC = 278,                 /* THEFUNC  */
+    THEFUNCINOF = 279,             /* THEFUNCINOF  */
+    VARID = 280,                   /* VARID  */
+    STRING = 281,                  /* STRING  */
+    SYMBOL = 282,                  /* SYMBOL  */
+    ENDCLAUSE = 283,               /* ENDCLAUSE  */
+    tPLAYACCEL = 284,              /* tPLAYACCEL  */
+    tMETHOD = 285,                 /* tMETHOD  */
+    THEOBJECTPROP = 286,           /* THEOBJECTPROP  */
+    tCAST = 287,                   /* tCAST  */
+    tFIELD = 288,                  /* tFIELD  */
+    tSCRIPT = 289,                 /* tSCRIPT  */
+    tWINDOW = 290,                 /* tWINDOW  */
+    tDOWN = 291,                   /* tDOWN  */
+    tELSE = 292,                   /* tELSE  */
+    tELSIF = 293,                  /* tELSIF  */
+    tEXIT = 294,                   /* tEXIT  */
+    tGLOBAL = 295,                 /* tGLOBAL  */
+    tGO = 296,                     /* tGO  */
+    tGOLOOP = 297,                 /* tGOLOOP  */
+    tIF = 298,                     /* tIF  */
+    tIN = 299,                     /* tIN  */
+    tINTO = 300,                   /* tINTO  */
+    tMACRO = 301,                  /* tMACRO  */
+    tMOVIE = 302,                  /* tMOVIE  */
+    tNEXT = 303,                   /* tNEXT  */
+    tOF = 304,                     /* tOF  */
+    tPREVIOUS = 305,               /* tPREVIOUS  */
+    tPUT = 306,                    /* tPUT  */
+    tREPEAT = 307,                 /* tREPEAT  */
+    tSET = 308,                    /* tSET  */
+    tTHEN = 309,                   /* tTHEN  */
+    tTO = 310,                     /* tTO  */
+    tWHEN = 311,                   /* tWHEN  */
+    tWITH = 312,                   /* tWITH  */
+    tWHILE = 313,                  /* tWHILE  */
+    tFACTORY = 314,                /* tFACTORY  */
+    tOPEN = 315,                   /* tOPEN  */
+    tPLAY = 316,                   /* tPLAY  */
+    tINSTANCE = 317,               /* tINSTANCE  */
+    tGE = 318,                     /* tGE  */
+    tLE = 319,                     /* tLE  */
+    tEQ = 320,                     /* tEQ  */
+    tNEQ = 321,                    /* tNEQ  */
+    tAND = 322,                    /* tAND  */
+    tOR = 323,                     /* tOR  */
+    tNOT = 324,                    /* tNOT  */
+    tMOD = 325,                    /* tMOD  */
+    tAFTER = 326,                  /* tAFTER  */
+    tBEFORE = 327,                 /* tBEFORE  */
+    tCONCAT = 328,                 /* tCONCAT  */
+    tCONTAINS = 329,               /* tCONTAINS  */
+    tSTARTS = 330,                 /* tSTARTS  */
+    tCHAR = 331,                   /* tCHAR  */
+    tITEM = 332,                   /* tITEM  */
+    tLINE = 333,                   /* tLINE  */
+    tWORD = 334,                   /* tWORD  */
+    tSPRITE = 335,                 /* tSPRITE  */
+    tINTERSECTS = 336,             /* tINTERSECTS  */
+    tWITHIN = 337,                 /* tWITHIN  */
+    tTELL = 338,                   /* tTELL  */
+    tPROPERTY = 339,               /* tPROPERTY  */
+    tON = 340,                     /* tON  */
+    tENDIF = 341,                  /* tENDIF  */
+    tENDREPEAT = 342,              /* tENDREPEAT  */
+    tENDTELL = 343,                /* tENDTELL  */
+    tASSERTERROR = 344             /* tASSERTERROR  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -146,7 +149,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 167 "engines/director/lingo/lingo-gr.y"
+#line 180 "engines/director/lingo/lingo-gr.y"
 
 	Common::String *s;
 	int i;
@@ -161,7 +164,7 @@ union YYSTYPE
 		Common::String *prop;
 	} objectprop;
 
-#line 165 "engines/director/lingo/lingo-gr.h"
+#line 168 "engines/director/lingo/lingo-gr.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

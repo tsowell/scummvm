@@ -30,7 +30,7 @@
 namespace Common {
 
 MemoryPool *g_refCountPool = nullptr; // FIXME: This is never freed right now
-MutexRef g_refCountPoolMutex = nullptr;
+Mutex *g_refCountPoolMutex = nullptr;
 
 void lockMemoryPoolMutex() {
 	// The Mutex class can only be used once g_system is set and initialized,
@@ -40,18 +40,18 @@ void lockMemoryPoolMutex() {
 	if (!g_system || !g_system->backendInitialized())
 		return;
 	if (!g_refCountPoolMutex)
-		g_refCountPoolMutex = g_system->createMutex();
-	g_system->lockMutex(g_refCountPoolMutex);
+		g_refCountPoolMutex = new Mutex();
+	g_refCountPoolMutex->lock();
 }
 
 void unlockMemoryPoolMutex() {
 	if (g_refCountPoolMutex)
-		g_system->unlockMutex(g_refCountPoolMutex);
+		g_refCountPoolMutex->unlock();
 }
 
 void String::releaseMemoryPoolMutex() {
 	if (g_refCountPoolMutex){
-		g_system->deleteMutex(g_refCountPoolMutex);
+		delete g_refCountPoolMutex;
 		g_refCountPoolMutex = nullptr;
 	}
 }
@@ -284,7 +284,7 @@ String &String::operator=(char c) {
 }
 
 String &String::operator+=(const char *str) {
-	if (_str <= str && str <= _str + _size)
+	if (pointerInOwnBuffer(str))
 		return operator+=(String(str));
 
 	int len = strlen(str);
@@ -295,6 +295,16 @@ String &String::operator+=(const char *str) {
 		_size += len;
 	}
 	return *this;
+}
+
+bool String::pointerInOwnBuffer(const char *str) const {
+	//compared pointers must be in the same array or UB
+	//cast to intptr however is IB
+	//which includes comparision of the values
+	uintptr ownBuffStart = (uintptr)_str;
+	uintptr ownBuffEnd = (uintptr)(_str + _size);
+	uintptr candidateAddr = (uintptr)str;
+	return ownBuffStart <= candidateAddr && candidateAddr <= ownBuffEnd;
 }
 
 String &String::operator+=(const String &str) {

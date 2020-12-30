@@ -33,6 +33,7 @@
 #include "director/lingo/lingo-code.h"
 #include "director/lingo/lingo-builtins.h"
 #include "director/lingo/lingo-bytecode.h"
+#include "director/lingo/lingo-object.h"
 #include "director/lingo/lingo-the.h"
 #include "director/lingo/lingo-gr.h"
 
@@ -75,11 +76,13 @@ static LingoV4Bytecode lingoV4[] = {
 	{ 0x43, LC::c_argcpush,		"b" },
 	// 0x44, push a constant
 	{ 0x45, LC::c_namepush,		"b" },
-	{ 0x46, LC::cb_objectpush,  "b" },
+	{ 0x46, LC::cb_varrefpush,  "b" },
+	{ 0x48, LC::cb_globalpush,	"b" }, // used in event scripts
 	{ 0x49, LC::cb_globalpush,	"b" },
 	{ 0x4a, LC::cb_thepush,		"b" },
 	{ 0x4b, LC::cb_varpush,		"bpa" },
 	{ 0x4c, LC::cb_varpush,		"bpv" },
+	{ 0x4e, LC::cb_globalassign,"b" }, // used in event scripts
 	{ 0x4f, LC::cb_globalassign,"b" },
 	{ 0x50, LC::cb_theassign,	"b" },
 	{ 0x51, LC::cb_varassign,	"bpa" },
@@ -99,7 +102,7 @@ static LingoV4Bytecode lingoV4[] = {
 	{ 0x60, LC::cb_theassign2,	"b" },
 	{ 0x61, LC::cb_objectfieldpush, "b" },
 	{ 0x62, LC::cb_objectfieldassign, "b" },
-	{ 0x63, LC::cb_tellcall,	"b" },
+	{ 0x63, LC::cb_call,		"b" }, // tellcall
 	{ 0x64, LC::c_stackpeek, 	"b" },
 	{ 0x65, LC::c_stackdrop, 	"b" },
 	{ 0x66, LC::cb_v4theentitynamepush, "b" },
@@ -108,11 +111,13 @@ static LingoV4Bytecode lingoV4[] = {
 	{ 0x83, LC::c_argcpush,		"w" },
 	// 0x84, push a constant
 	{ 0x85, LC::c_namepush,		"w" },
-	{ 0x86, LC::cb_objectpush,  "w" },
+	{ 0x86, LC::cb_varrefpush,  "w" },
+	{ 0x88, LC::cb_globalpush,	"w" }, // used in event scripts
 	{ 0x89, LC::cb_globalpush,	"w" },
 	{ 0x8a, LC::cb_thepush,		"w" },
 	{ 0x8b, LC::cb_varpush,		"wpa" },
 	{ 0x8c, LC::cb_varpush,		"wpv" },
+	{ 0x8e, LC::cb_globalassign,"w" }, // used in event scripts
 	{ 0x8f, LC::cb_globalassign,"w" },
 	{ 0x90, LC::cb_theassign, 	"w" },
 	{ 0x91, LC::cb_varassign,	"wpa" },
@@ -152,17 +157,22 @@ static LingoV4TheEntity lingoV4TheEntity[] = {
 	{ 0x00, 0x0d, kTheWords,			kTheLast,			false, kTEAString },
 	{ 0x00, 0x0e, kTheItems,			kTheLast,			false, kTEAString },
 	{ 0x00, 0x0f, kTheLines,			kTheLast,			false, kTEAString },
+
 	{ 0x01, 0x01, kTheChars,			kTheNumber,			false, kTEAString },
 	{ 0x01, 0x02, kTheWords,			kTheNumber,			false, kTEAString },
 	{ 0x01, 0x03, kTheItems,			kTheNumber,			false, kTEAString },
 	{ 0x01, 0x04, kTheLines,			kTheNumber,			false, kTEAString },
+
 	{ 0x02, 0x01, kTheMenu,				kTheName,			false, kTEAItemId },
 	{ 0x02, 0x02, kTheMenuItems,		kTheNumber,			false, kTEAItemId },
+
 	{ 0x03, 0x01, kTheMenuItem,			kTheName,			true, kTEAMenuIdItemId },
 	{ 0x03, 0x02, kTheMenuItem,			kTheCheckMark,		true, kTEAMenuIdItemId },
 	{ 0x03, 0x03, kTheMenuItem,			kTheEnabled,		true, kTEAMenuIdItemId },
 	{ 0x03, 0x04, kTheMenuItem,			kTheScript,			true, kTEAMenuIdItemId },
+
 	{ 0x04, 0x01, kTheSoundEntity,		kTheVolume,			true, kTEAItemId },
+
 	{ 0x06, 0x01, kTheSprite,			kTheCursor,			true, kTEAItemId },
 	{ 0x06, 0x02, kTheSprite,			kTheBackColor,		true, kTEAItemId },
 	{ 0x06, 0x03, kTheSprite,			kTheBottom,			true, kTEAItemId },
@@ -171,6 +181,7 @@ static LingoV4TheEntity lingoV4TheEntity[] = {
 	{ 0x06, 0x06, kTheSprite,			kTheCursor,			true, kTEAItemId },
 	{ 0x06, 0x07, kTheSprite,			kTheForeColor,		true, kTEAItemId },
 	{ 0x06, 0x08, kTheSprite,			kTheHeight,			true, kTEAItemId },
+	{ 0x06, 0x09, kTheSprite,			kTheImmediate,		true, kTEAItemId },
 	{ 0x06, 0x0a, kTheSprite,			kTheInk,			true, kTEAItemId },
 	{ 0x06, 0x0b, kTheSprite,			kTheLeft,			true, kTEAItemId },
 	{ 0x06, 0x0c, kTheSprite,			kTheLineSize,		true, kTEAItemId },
@@ -178,6 +189,7 @@ static LingoV4TheEntity lingoV4TheEntity[] = {
 	{ 0x06, 0x0e, kTheSprite,			kTheLocV,			true, kTEAItemId },
 	{ 0x06, 0x0f, kTheSprite,			kTheMovieRate,		true, kTEAItemId },
 	{ 0x06, 0x10, kTheSprite,			kTheMovieTime,		true, kTEAItemId },
+	{ 0x06, 0x11, kTheSprite,			kThePattern,		true, kTEAItemId },
 	{ 0x06, 0x12, kTheSprite,			kThePuppet,			true, kTEAItemId },
 	{ 0x06, 0x13, kTheSprite,			kTheRight,			true, kTEAItemId },
 	{ 0x06, 0x14, kTheSprite,			kTheStartTime,		true, kTEAItemId },
@@ -188,46 +200,79 @@ static LingoV4TheEntity lingoV4TheEntity[] = {
 	{ 0x06, 0x19, kTheSprite,			kTheVisible,		true, kTEAItemId },
 	{ 0x06, 0x1a, kTheSprite,			kTheVolume,			true, kTEAItemId },
 	{ 0x06, 0x1b, kTheSprite,			kTheWidth,			true, kTEAItemId },
+	{ 0x06, 0x1c, kTheSprite,			kTheBlend,			true, kTEAItemId },
 	{ 0x06, 0x1d, kTheSprite,			kTheScriptNum,		true, kTEAItemId },
 	{ 0x06, 0x1e, kTheSprite,			kTheMoveableSprite,	true, kTEAItemId },
+	{ 0x06, 0x1f, kTheSprite,			kTheEditableText,	true, kTEAItemId },
 	{ 0x06, 0x20, kTheSprite,			kTheScoreColor,		true, kTEAItemId },
+	{ 0x06, 0x21, kTheSprite,			kTheLoc,			true, kTEAItemId },
+	{ 0x06, 0x22, kTheSprite,			kTheRect,			true, kTEAItemId },
+
 	{ 0x07, 0x01, kTheBeepOn,			kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x02, kTheButtonStyle,		kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x03, kTheCenterStage,		kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x04, kTheCheckBoxAccess,	kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x05, kTheCheckBoxType,		kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x06, kTheColorDepth,		kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x07, kTheColorQD,			kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x08, kTheExitLock,			kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x09, kTheFixStageSize,		kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x0a, kTheFullColorPermit,	kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x0b, kTheImageDirect,		kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x0c, kTheDoubleClick,		kTheNOField,		true, kTEANOArgs },
+//	{ 0x07, 0x0d, ???,					kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x0e, kTheLastClick,		kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x0f, kTheLastEvent,		kTheNOField,		true, kTEANOArgs },
+//	{ 0x07, 0x10, ???,					kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x11, kTheLastKey,			kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x12, kTheLastRoll,			kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x13, kTheTimeoutLapsed,	kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x14, kTheMultiSound,		kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x15, kThePauseState,		kTheNOField,		true, kTEANOArgs },
+	{ 0x07, 0x16, kTheQuickTimePresent,	kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x17, kTheSelEnd,			kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x18, kTheSelStart,			kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x19, kTheSoundEnabled,		kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x1a, kTheSoundLevel,		kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x1b, kTheStageColor,		kTheNOField,		true, kTEANOArgs },
+//	{ 0x07, 0x1c, ????,					kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x1d, kTheStillDown,		kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x1e, kTheTimeoutKeyDown,	kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x1f, kTheTimeoutLength,	kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x20, kTheTimeoutMouse,		kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x21, kTheTimeoutPlay,		kTheNOField,		true, kTEANOArgs },
 	{ 0x07, 0x22, kTheTimer,			kTheNOField,		true, kTEANOArgs },
-	{ 0x08, 0x01, kThePerFrameHook,		kTheNOField,		false, kTEANOArgs },
+	{ 0x07, 0x23, kThePreLoadRAM,		kTheNOField,		true, kTEANOArgs },
+
+	{ 0x08, 0x01, kThePerFrameHook,		kTheNOField,		true, kTEANOArgs },
 	{ 0x08, 0x02, kTheCastMembers,		kTheNumber,			false, kTEANOArgs },
 	{ 0x08, 0x03, kTheMenus,			kTheNumber,			false, kTEANOArgs },
+
 	{ 0x09, 0x01, kTheCast,				kTheName,			true, kTEAItemId },
 	{ 0x09, 0x02, kTheCast,				kTheText,			true, kTEAItemId },
 	{ 0x09, 0x08, kTheCast,				kThePicture,		true, kTEAItemId },
+	{ 0x09, 0x09, kTheCast,				kTheHilite,			true, kTEAItemId },
 	{ 0x09, 0x0a, kTheCast,				kTheNumber,			true, kTEAItemId },
 	{ 0x09, 0x0b, kTheCast,				kTheSize,			true, kTEAItemId },
 	{ 0x09, 0x11, kTheCast,				kTheForeColor,		true, kTEAItemId },
 	{ 0x09, 0x12, kTheCast,				kTheBackColor,		true, kTEAItemId },
+
+	{ 0x0b, 0x01, kTheField,			kTheName,			true, kTEAItemId },
+	{ 0x0b, 0x02, kTheField,			kTheText,			true, kTEAItemId },
 	{ 0x0b, 0x03, kTheField,			kTheTextStyle,		true, kTEAItemId },
 	{ 0x0b, 0x04, kTheField,			kTheTextFont,		true, kTEAItemId },
 	{ 0x0b, 0x05, kTheField,			kTheTextHeight,		true, kTEAItemId },
 	{ 0x0b, 0x06, kTheField,			kTheTextAlign,		true, kTEAItemId },
 	{ 0x0b, 0x07, kTheField,			kTheTextSize,		true, kTEAItemId },
+	{ 0x0b, 0x09, kTheField,			kTheHilite,			true, kTEAItemId },
+	{ 0x0b, 0x11, kTheField,			kTheForeColor,		true, kTEAItemId },
+
+	{ 0x0d, 0x0c, kTheCast,				kTheLoop,			true, kTEAItemId },
+	{ 0x0d, 0x0d, kTheCast,				kTheDuration,		true, kTEAItemId },
+	{ 0x0d, 0x0e, kTheCast,				kTheController,		true, kTEAItemId },
 	{ 0x0d, 0x0f, kTheCast,				kTheDirectToStage,	true, kTEAItemId },
 	{ 0x0d, 0x10, kTheCast,				kTheSound,			true, kTEAItemId },
+
 	{ 0xff, 0, 0, 0, false, kTEANOArgs }
 };
 
@@ -261,6 +306,53 @@ void Lingo::initBytecode() {
 	}
 }
 
+Datum Lingo::findVarV4(int varType, const Datum &id) {
+	Datum res;
+	switch (varType) {
+	case 1: // global
+	case 2: // global
+	case 3: // property/instance
+		if (id.type == VAR) {
+			res = id;
+		} else {
+			warning("BUILDBOT: findVarV4: expected ID for var type %d to be VAR, got %s", varType, id.type2str());
+		}
+		break;
+	case 4: // arg
+	case 5: // local
+		{
+			if (g_lingo->_callstack.empty()) {
+				warning("BUILDBOT: findVarV4: no call frame");
+				return res;
+			}
+			if (id.asInt() % 6 != 0) {
+				warning("BUILDBOT: findVarV4: invalid var ID %d for var type %d (not divisible by 6)", id.asInt(), varType);
+				return res;
+			}
+			int varIndex = id.asInt() / 6;
+			Common::Array<Common::String> *varNames = (varType == 4)
+				? _callstack.back()->sp.argNames
+				: _callstack.back()->sp.varNames;
+
+			if (varIndex < (int)varNames->size()) {
+				res = (*varNames)[varIndex];
+				res.type = VAR;
+			} else {
+				warning("BUILDBOT: findVarV4: invalid var ID %d for var type %d (too high)", id.asInt(), varType);
+			}
+		}
+		break;
+	case 6: // field
+		res = id.asCastId();
+		res.type = FIELDREF;
+		break;
+	default:
+		warning("BUILDBOT: findVarV4: unhandled var type %d", varType);
+		break;
+	}
+	return res;
+}
+
 void LC::cb_unk() {
 	uint opcode = g_lingo->readInt();
 	warning("STUB: opcode 0x%02x", opcode);
@@ -287,9 +379,6 @@ void LC::cb_delete() {
 
 void LC::cb_field() {
 	LB::b_field(1);
-	Datum field = g_lingo->pop();
-	Datum result = g_lingo->varFetch(field);
-	g_lingo->push(result);
 }
 
 
@@ -302,7 +391,7 @@ void LC::cb_localcall() {
 		if (debugChannelSet(3, kDebugLingoExec))
 			g_lingo->printSTUBWithArglist(name.c_str(), nargs.u.i, "localcall:");
 
-		LC::call(name, nargs.u.i);
+		LC::call(name, nargs.u.i, nargs.type == ARGC);
 
 	} else {
 		warning("cb_localcall: first arg should be of type ARGC or ARGCNORET, not %s", nargs.type2str());
@@ -312,39 +401,14 @@ void LC::cb_localcall() {
 
 
 void LC::cb_objectcall() {
-	g_lingo->readInt();
-	Datum d = g_lingo->pop();
+	int varType = g_lingo->readInt();
+	Datum varId = g_lingo->pop(false);
 	Datum nargs = g_lingo->pop();
 
-	Object *target = nullptr;
-
-	if (d.type == INT) {
-		if (g_lingo->_callstack.empty()) {
-			warning("cb_objectcall: no call frame");
-			return;
-		}
-		Common::Array<Common::String> *varNames = g_lingo->_callstack.back()->sp.varNames;
-		if ((d.asInt() % 6 == 0) && varNames && (d.asInt() / 6 < (int)varNames->size())) {
-			d = (*varNames)[d.asInt() / 6];
-			d.type = SYMBOL;
-		} else {
-			warning("cb_objectcall: invalid variable ID %d", d.asInt());
-			return;
-		}
-	}
-
-	if (d.type != SYMBOL) {
-		warning("cb_objectcall: first arg should be of type SYMBOL or INT, not %s", d.type2str());
+	Datum var = g_lingo->findVarV4(varType, varId);
+	if (var.type != VAR) {
+		warning("cb_objectcall: first arg did not resolve to variable");
 		return;
-	}
-
-	// try to fetch target
-	d.type = VAR;
-	Datum val = g_lingo->varFetch(d);
-	if (val.type == OBJECT) {
-		target = val.u.obj;
-	} else {
-		warning("cb_objectcall: target is not an object");
 	}
 
 	if ((nargs.type != ARGC) && (nargs.type != ARGCNORET)) {
@@ -352,106 +416,43 @@ void LC::cb_objectcall() {
 		return;
 	}
 
-	StackData args;
-	if (target) {
-		// last arg on the stack is the method name
-		nargs.u.i -= 1;
+	if (nargs.u.i > 0) {
+		Datum &firstArg = g_lingo->_stack[g_lingo->_stack.size() - nargs.u.i];
+		// The first arg could be either a method name or a variable name
+		if (firstArg.type == SYMBOL) {
+			firstArg.type = VAR;
+		}
 	}
 
-	for (int i = 0; i < nargs.u.i; i++) {
-		Datum arg = g_lingo->pop();
-		// for some reason, strings that are sent to here are actually variable names???
-		// other constants (e.g. ints) are fine.
-		if (arg.type == STRING) {
-			Datum varTest(arg);
-			varTest.type = VAR;
-			varTest = g_lingo->varFetch(varTest);
-			if (varTest.type != VOID)
-				arg = varTest;
-		}
-		args.push_back(arg);
-	}
-
-	Datum methodName;
-	if (target) {
-		methodName = g_lingo->pop();
-		if (methodName.u.s->equalsIgnoreCase("mNew")) {
-			target = target->clone();
-		}
-		Symbol method = target->getMethod(methodName.asString());
-		if (method.type != VOID) {
-			if (target->type == kFactoryObj && method.type == HANDLER) {
-				// For kFactoryObj handlers the target is the first argument
-				g_lingo->push(method.ctx->_target); // reference-counted datum
-				nargs.u.i += 1;
-			}
-			while (args.size()) {
-				g_lingo->push(args.back());
-				args.pop_back();
-			}
-			LC::call(method, nargs.u.i);
-			return;
-		}
-
-		warning("cb_objectcall: target has no method named %s", methodName.asString().c_str());
-	}
-
-	// if there's nothing, try calling a function with that name
-	Symbol func = g_lingo->getHandler(*d.u.s);
-	if (func.type != VOID) {
-		if (target) {
-			g_lingo->push(methodName);
-		}
-		while (args.size()) {
-			g_lingo->push(args.back());
-			args.pop_back();
-		}
-
-		LC::call(func, nargs.u.i);
-	} else {
-		warning("cb_objectcall: could not find object or function with name %s", d.u.s->c_str());
-		// Push a VOID to the stack if function is supposed to return
-		if (nargs.type == ARGC)
-			g_lingo->push(Datum());
-	}
+	LC::call(*var.u.s, nargs.u.i, nargs.type == ARGC);
 }
 
 
 void LC::cb_v4assign() {
-	int op = g_lingo->readInt();
+	int arg = g_lingo->readInt();
+	int op = (arg >> 4) & 0xF;
+	int varType = arg & 0xF;
+	Datum varId = g_lingo->pop(false);
+
+	Datum var = g_lingo->findVarV4(varType, varId);
+	g_lingo->push(var);
 
 	switch (op) {
-	case 0x16:
-		// put value into field textVar
-		{
-			LB::b_field(1);
-			LC::c_assign();
-		}
+	case 1:
+		// put value into var
+		LC::c_assign();
 		break;
-	case 0x26:
-		// put value after field textVar
-		{
-			LB::b_field(1);
-			Datum field = g_lingo->pop();
-			g_lingo->push(field);
-			LC::c_after();
-			g_lingo->push(field);
-			LC::c_assign();
-		}
+	case 2:
+		// put value after var
+		LC::c_putafter();
 		break;
-	case 0x36:
-		// put value before field textVar
-		{
-			LB::b_field(1);
-			Datum field = g_lingo->pop();
-			g_lingo->push(field);
-			LC::c_before();
-			g_lingo->push(field);
-			LC::c_assign();
-		}
+	case 3:
+		// put value before var
+		LC::c_putbefore();
 		break;
 	default:
 		warning("cb_v4assign: unknown operator %d", op);
+		g_lingo->pop();
 		break;
 	}
 }
@@ -482,8 +483,8 @@ void LC::cb_proplist() {
 	arraySize /= 2;
 
 	for (int i = 0; i < arraySize; i++) {
-		Datum p = g_lingo->pop();
 		Datum v = g_lingo->pop();
+		Datum p = g_lingo->pop();
 
 		PCell cell = PCell(p, v);
 		result.u.parr->insert_at(0, cell);
@@ -502,7 +503,7 @@ void LC::cb_call() {
 
 	Datum nargs = g_lingo->pop();
 	if ((nargs.type == ARGC) || (nargs.type == ARGCNORET)) {
-		LC::call(name, nargs.u.i);
+		LC::call(name, nargs.u.i, nargs.type == ARGC);
 
 	} else {
 		warning("cb_call: first arg should be of type ARGC or ARGCNORET, not %s", nargs.type2str());
@@ -539,8 +540,8 @@ void LC::cb_globalassign() {
 void LC::cb_objectfieldassign() {
 	int fieldNameId = g_lingo->readInt();
 	Common::String fieldName = g_lingo->_currentArchive->getName(fieldNameId);
-	Datum object = g_lingo->pop();
 	Datum value = g_lingo->pop();
+	Datum object = g_lingo->pop();
 	g_lingo->setObjectProp(object, fieldName, value);
 }
 
@@ -551,29 +552,12 @@ void LC::cb_objectfieldpush() {
 	g_lingo->push(g_lingo->getObjectProp(object, fieldName));
 }
 
-void LC::cb_objectpush() {
+void LC::cb_varrefpush() {
 	int nameId = g_lingo->readInt();
 	Common::String name = g_lingo->_currentArchive->getName(nameId);
 	Datum result(name);
-	result.type = SYMBOL;
+	result.type = VAR;
 	g_lingo->push(result);
-}
-
-void LC::cb_tellcall() {
-	int nameId = g_lingo->readInt();
-	Common::String name = g_lingo->_currentArchive->getName(nameId);
-	warning("STUB: cb_tellcall(%s)", name.c_str());
-
-	Datum nargs = g_lingo->pop();
-	if ((nargs.type == ARGC) || (nargs.type == ARGCNORET)) {
-		//LC::call(name, nargs.u.i);
-		for (int i = 0; i < nargs.u.i; i++) {
-			g_lingo->pop();
-		}
-	} else {
-		warning("cb_tellcall: first arg should be of type ARGC or ARGCNORET, not %s", nargs.type2str());
-	}
-
 }
 
 void LC::cb_theassign() {
@@ -582,7 +566,7 @@ void LC::cb_theassign() {
 	Datum value = g_lingo->pop();
 	if (g_lingo->_currentMe.type == OBJECT) {
 		if (g_lingo->_currentMe.u.obj->hasProp(name)) {
-			g_lingo->_currentMe.u.obj->getProp(name) = value;
+			g_lingo->_currentMe.u.obj->setProp(name, value);
 		} else {
 			warning("cb_theassign: me object has no property '%s'", name.c_str());
 		}
@@ -711,7 +695,7 @@ void LC::cb_v4theentitypush() {
 			break;
 		}
 	} else {
-		warning("cb_v4theentitypush: unhandled mapping 0x%02x 0x%02x", bank, firstArg);
+		warning("cb_v4theentitypush: BUILDBOT: unhandled mapping 0x%02x 0x%02x", bank, firstArg);
 	}
 
 	g_lingo->push(result);
@@ -817,7 +801,7 @@ void LC::cb_zeropush() {
 	g_lingo->push(d);
 }
 
-ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream, LingoArchive *archive, const Common::String &archName) {
+ScriptContext *Lingo::compileLingoV4(Common::SeekableReadStreamEndian &stream, LingoArchive *archive, const Common::String &archName) {
 	if (stream.size() < 0x5c) {
 		warning("Lscr header too small");
 		return nullptr;
@@ -844,7 +828,7 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 	/* uint32 length = */ stream.readUint32();
 	/* uint32 length2 = */ stream.readUint32();
 	uint16 codeStoreOffset = stream.readUint16();
-	/* uint16 lctxIndex = */ stream.readUint16();
+	uint16 scriptId = stream.readUint16() + 1;
 	// unk2
 	for (uint32 i = 0; i < 0x10; i++) {
 		stream.readByte();
@@ -853,23 +837,40 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 	// offset 36
 	/* uint16 unk3 = */ stream.readUint16();
 	uint32 scriptFlags = stream.readUint32();
-	debugC(1, kDebugCompile, "Script flags:");
-	debugC(1, kDebugCompile, "unk0: %d global: %d unk2: %d unk3: %d", (scriptFlags & kScriptFlagUnk0) != 0, (scriptFlags & kScriptFlagGlobal) != 0, (scriptFlags & kScriptFlagUnk2) != 0, (scriptFlags & kScriptFlagUnk3) != 0);
+	debugC(1, kDebugCompile, "Script flags (%d 0x%x):", scriptFlags, scriptFlags);
+	debugC(1, kDebugCompile, "unused: %d funcsGlobal: %d varsGlobal: %d unk3: %d", (scriptFlags & kScriptFlagUnused) != 0, (scriptFlags & kScriptFlagFuncsGlobal) != 0, (scriptFlags & kScriptFlagVarsGlobal) != 0, (scriptFlags & kScriptFlagUnk3) != 0);
 	debugC(1, kDebugCompile, "factoryDef: %d unk5: %d unk6: %d unk7: %d", (scriptFlags & kScriptFlagFactoryDef) != 0, (scriptFlags & kScriptFlagUnk5) != 0, (scriptFlags & kScriptFlagUnk6) != 0, (scriptFlags & kScriptFlagUnk7) != 0);
-	debugC(1, kDebugCompile, "hasFactory: %d unk9: %d unkA: %d unkB: %d", (scriptFlags & kScriptFlagHasFactory) != 0, (scriptFlags & kScriptFlagUnk9) != 0, (scriptFlags & kScriptFlagUnkA) != 0, (scriptFlags & kScriptFlagUnkB) != 0);
+	debugC(1, kDebugCompile, "hasFactory: %d eventScript: %d eventScript2: %d unkB: %d", (scriptFlags & kScriptFlagHasFactory) != 0, (scriptFlags & kScriptFlagEventScript) != 0, (scriptFlags & kScriptFlagEventScript2) != 0, (scriptFlags & kScriptFlagUnkB) != 0);
 	debugC(1, kDebugCompile, "unkC: %d unkD: %d unkE: %d unkF: %d", (scriptFlags & kScriptFlagUnkC) != 0, (scriptFlags & kScriptFlagUnkD) != 0, (scriptFlags & kScriptFlagUnkE) != 0, (scriptFlags & kScriptFlagUnkF) != 0);
+
+	if (scriptFlags & kScriptFlagUnused) {
+		warning("Script %d is unused", scriptId);
+		return nullptr;
+	}
+
 	// unk4
 	for (uint32 i = 0; i < 0x4; i++) {
 		stream.readByte();
 	}
-	uint16 castId = stream.readUint16();
+	/* uint16 castId = */ stream.readUint16();
+	// The script is coupled with to a Cast via the script ID.
+	// This castId isn't always correct.
+
 	int16 factoryNameId = stream.readSint16();
 
 	// offset 50 - contents map
-	// TODO: I believe the handler vectors map handlers to some sort of identifier
-	/* uint16 handlerVectorsCount = */ stream.readUint16();
-	/* uint32 handlerVectorsOffset = */ stream.readUint32();
-	/* uint32 handlerVectorFlags = */ stream.readUint32();
+
+	/* uint16 eventMapCount = */ stream.readUint16();
+	/* uint32 eventMapOffset = */ stream.readUint32();
+	/* uint32 eventMapFlags = */ stream.readUint32();
+	// The event map is an int16 array used to quickly access events.
+	// Its first item is the index of the mouseDown handler or -1,
+	// its second item is the index of the mouseUp handler or -1, etc.
+	// eventMapFlags & (1 << 0) indicates there is a mouseDown handler,
+	// eventMapFlags & (1 << 1) indicates there is a mouseUp handler, etc.
+	// We probably don't need to read this since we already did something
+	// similar with _eventHandlers.
+
 	uint16 propertiesCount = stream.readUint16();
 	uint32 propertiesOffset = stream.readUint32();
 	uint16 globalsCount = stream.readUint16();
@@ -884,14 +885,20 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 	// initialise the script
 	ScriptType scriptType = kCastScript;
 	Common::String castName;
-	CastMember *member = g_director->getCurrentMovie()->getCastMember(castId);
+	CastMember *member = g_director->getCurrentMovie()->getCastMemberByScriptId(scriptId);
+	int castId;
 	if (member) {
 		if (member->_type == kCastLingoScript)
 			scriptType = ((ScriptCastMember *)member)->_scriptType;
 
+		castId = member->getID();
 		CastMemberInfo *info = g_director->getCurrentMovie()->getCastMemberInfo(castId);
 		if (info)
 			castName = info->name;
+	} else {
+		warning("Script %d has no associated cast member", scriptId);
+		scriptType = kNoneScript;
+		castId = -1;
 	}
 
 	_assemblyArchive = archive;
@@ -902,22 +909,15 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 		if (0 <= factoryNameId && factoryNameId < (int16)archive->names.size()) {
 			factoryName = archive->names[factoryNameId];
 		} else {
-			warning("Factory %d has unknown name id %d, skipping define", castId, factoryNameId);
+			warning("Factory %d has unknown name id %d, skipping define", scriptId, factoryNameId);
 			return nullptr;
 		}
-		debugC(1, kDebugCompile, "Add V4 bytecode for factory '%s' with id %d", factoryName.c_str(), castId);
+		debugC(1, kDebugCompile, "Add V4 script %d: factory '%s'", scriptId, factoryName.c_str());
 
+		sc = _assemblyContext = new ScriptContext(factoryName, _assemblyArchive, scriptType, castId);
 		codeFactory(factoryName);
-		_assemblyContext = _currentFactory->ctx;
 	} else {
-		debugC(1, kDebugCompile, "Add V4 bytecode for type %s with id %d", scriptType2str(scriptType), castId);
-
-		if (archive->getScriptContext(scriptType, castId)) {
-			// We can't undefine context data because it could be used in e.g. symbols.
-			// Abort on double definitions.
-			error("Script already defined for type %d, id %d", scriptType, castId);
-			return nullptr;
-		}
+		debugC(1, kDebugCompile, "Add V4 script %d: %s %d", scriptId, scriptType2str(scriptType), castId);
 
 		sc = _assemblyContext = new ScriptContext(!castName.empty() ? castName : Common::String::format("%d", castId), _assemblyArchive, scriptType, castId);
 	}
@@ -935,11 +935,7 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 		if (0 <= index && index < (int16)archive->names.size()) {
 			const char *name = archive->names[index].c_str();
 			debugC(5, kDebugLoading, "%d: %s", i, name);
-			if (scriptFlags & kScriptFlagFactoryDef) {
-				_currentFactory->properties[name] = Datum();
-			} else {
-				_assemblyContext->_propNames.push_back(name);
-			}
+			_assemblyContext->_properties[name] = Datum();
 		} else {
 			warning("Property %d has unknown name id %d, skipping define", i, index);
 		}
@@ -994,7 +990,7 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 	for (uint16 i = 0; i < constsCount; i++) {
 		Datum constant;
 		uint32 constType = 0;
-		if (_vm->getVersion() >= 5) {
+		if (_vm->getVersion() >= 500) {
 			constType = stream.readUint32();
 		} else {
 			constType = (uint32)stream.readUint16();
@@ -1115,7 +1111,7 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 	if (ConfMan.getBool("dump_scripts")) {
 		Common::String buf = dumpScriptName(archName.c_str(), scriptType, castId, "lscr");
 
-		if (!out.open(buf)) {
+		if (!out.open(buf, true)) {
 			warning("Lingo::addCodeV4(): Can not open dump file %s", buf.c_str());
 			skipdump = true;
 		} else {
@@ -1395,10 +1391,19 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 		}
 
 		// Attach to handlers
-		Symbol sym;
+
+		Common::String functionName;
 		if (0 <= nameIndex && nameIndex < (int16)archive->names.size()) {
-			debugC(5, kDebugLoading, "Function %d binding: %s()", i, archive->names[nameIndex].c_str());
-			sym = _assemblyContext->define(archive->names[nameIndex], argCount, _currentAssembly, argNames, varNames);
+			functionName = archive->names[nameIndex];
+		} else if (i == 0 && (scriptFlags & kScriptFlagEventScript)) {
+			// event script (lingo not contained within a handler)
+			functionName = _eventHandlerTypes[kEventGeneric];
+		}
+
+		Symbol sym;
+		if (!functionName.empty()) {
+			debugC(5, kDebugLoading, "Function %d binding: %s()", i, functionName.c_str());
+			sym = _assemblyContext->define(functionName, argCount, _currentAssembly, argNames, varNames);
 		} else {
 			warning("Function has unknown name id %d, skipping define", nameIndex);
 			sym.name = new Common::String();
@@ -1411,11 +1416,20 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 		}
 
 		if (!skipdump && ConfMan.getBool("dump_scripts")) {
-			if (0 <= nameIndex && nameIndex < (int16)archive->names.size())
-				out.writeString(Common::String::format("function %s, %d args\n", archive->names[nameIndex].c_str(), argCount));
-			else
+			if (0 <= nameIndex && nameIndex < (int16)archive->names.size()) {
+				Common::String res = Common::String::format("function %s, %d args", archive->names[nameIndex].c_str(), argCount);
+				if (argCount != 0)
+					res += ": ";
+				for (int argIndex = 0;  argIndex < argCount; argIndex++) {
+					res += (*argNames)[argIndex].c_str();
+					if (argIndex < (argCount - 1))
+						res += ", ";
+				}
+				res += "\n";
+				out.writeString(res.c_str());
+			} else {
 				out.writeString(Common::String::format("<noname>, %d args\n", argCount));
-
+			}
 			uint pc = 0;
 			while (pc < _currentAssembly->size()) {
 				uint spc = pc;
@@ -1436,18 +1450,19 @@ ScriptContext *Lingo::compileLingoV4(Common::SeekableSubReadStreamEndian &stream
 
 	free(codeStore);
 	_assemblyContext = nullptr;
-	_currentFactory = nullptr;
 
 	return sc;
 }
 
-void LingoArchive::addCodeV4(Common::SeekableSubReadStreamEndian &stream, const Common::String &archName) {
+void LingoArchive::addCodeV4(Common::SeekableReadStreamEndian &stream, uint16 lctxIndex, const Common::String &archName) {
 	ScriptContext *ctx = g_lingo->compileLingoV4(stream, this, archName);
-	if (ctx)
-		scriptContexts[ctx->_type][ctx->_id] = ctx;
+	if (ctx) {
+		lctxContexts[lctxIndex] = ctx;
+		*ctx->_refCount += 1;
+	}
 }
 
-void LingoArchive::addNamesV4(Common::SeekableSubReadStreamEndian &stream) {
+void LingoArchive::addNamesV4(Common::SeekableReadStreamEndian &stream) {
 	debugC(1, kDebugCompile, "Add V4 script name index");
 
 	if (stream.size() < 0x14) {
@@ -1465,14 +1480,13 @@ void LingoArchive::addNamesV4(Common::SeekableSubReadStreamEndian &stream) {
 	stream.readUint16();
 	stream.readUint16();
 	stream.readUint16();
-	stream.readUint16();
-	stream.readUint16();
-	stream.readUint16();
-	stream.readUint16();
+
+	uint32 size = stream.readUint32(); // size of Lnam
+	stream.readUint32(); // size of Lnam again
 	uint16 offset = stream.readUint16();
 	uint16 count = stream.readUint16();
 
-	if (stream.size() < offset) {
+	if ((uint32)stream.size() != size) {
 		warning("Lnam content missing");
 		return;
 	}
@@ -1481,16 +1495,13 @@ void LingoArchive::addNamesV4(Common::SeekableSubReadStreamEndian &stream) {
 
 	names.clear();
 
-	for (uint32 i = 0; i < count; i++) {
-		uint8 size = stream.readByte();
-		Common::String name;
-		for (uint8 j = 0; j < size; j++) {
-			name += stream.readByte();
-		}
+	for (uint16 i = 0; i < count; i++) {
+		Common::String name = stream.readPascalString();
+
 		names.push_back(name);
 		debugC(5, kDebugLoading, "%d: \"%s\"", i, name.c_str());
 	}
 
 }
 
-}
+} // end of namespace Director

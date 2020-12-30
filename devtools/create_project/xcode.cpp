@@ -497,6 +497,9 @@ void XcodeProvider::setupFrameworksBuildPhase(const BuildSetup &setup) {
 	if (CONTAINS_DEFINE(setup.defines, "USE_ZLIB")) {
 		DEF_SYSTBD("libz");
 	}
+	if (CONTAINS_DEFINE(setup.defines, "USE_DISCORD")) {
+		DEF_LOCALLIB_STATIC("libdiscord-rpc");
+	}
 
 	if (setup.useSDL2) {
 		DEF_LOCALLIB_STATIC("libSDL2main");
@@ -806,6 +809,7 @@ XcodeProvider::ValueList& XcodeProvider::getResourceFiles() const {
 		files.push_back("dists/engine-data/wintermute.zip");
 		files.push_back("dists/engine-data/macventure.dat");
 		files.push_back("dists/engine-data/xeen.ccs");
+		files.push_back("dists/ios7/LaunchScreen_ios.storyboard");
 		files.push_back("dists/pred.dic");
 		files.push_back("dists/networking/wwwroot.zip");
 		files.push_back("icons/scummvm.icns");

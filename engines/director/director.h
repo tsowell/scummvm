@@ -23,19 +23,24 @@
 #ifndef DIRECTOR_DIRECTOR_H
 #define DIRECTOR_DIRECTOR_H
 
-#include "common/random.h"
+#include "common/file.h"
+#include "common/hashmap.h"
+#include "common/hash-ptr.h"
+#include "common/hash-str.h"
 #include "common/rect.h"
 #include "common/str-array.h"
 
-#include "common/hashmap.h"
 #include "engines/engine.h"
+#include "graphics/pixelformat.h"
+#include "graphics/macgui/macwindowmanager.h"
 
 #include "director/types.h"
+#include "director/util.h"
 
 namespace Common {
 class MacResManager;
 class SeekableReadStream;
-class SeekableSubReadStreamEndian;
+class SeekableReadStreamEndian;
 }
 
 namespace Graphics {
@@ -60,8 +65,9 @@ struct DirectorGameDescription;
 class DirectorSound;
 class Lingo;
 class Movie;
-class Stage;
+class Window;
 class Score;
+class Channel;
 class CastMember;
 class Stxt;
 
@@ -77,11 +83,13 @@ enum {
 	kDebugSlow			= 1 << 8,
 	kDebugFast			= 1 << 9,
 	kDebugNoLoop		= 1 << 10,
-	kDebugBytecode		= 1 << 11,
+	kDebugNoBytecode	= 1 << 11,
 	kDebugFewFramesOnly	= 1 << 12,
 	kDebugPreprocess	= 1 << 13,
 	kDebugScreenshot	= 1 << 14,
-	kDebugDesktop		= 1 << 15
+	kDebugDesktop		= 1 << 15,
+	kDebug32bpp			= 1 << 16,
+	kDebugEndVideo		= 1 << 17
 };
 
 struct MovieReference {
@@ -92,33 +100,84 @@ struct MovieReference {
 	MovieReference() { frameI = -1; }
 };
 
+struct StartMovie {
+	Common::String startMovie;
+	int16 startFrame;
+};
+
 struct PaletteV4 {
 	int id;
 	byte *palette;
 	int length;
+
+	PaletteV4(int i, byte *p, int l) : id(i), palette(p), length(l) {}
+	PaletteV4() : id(0), palette(nullptr), length(0) {}
+};
+
+struct MacShape {
+	InkType ink;
+	byte spriteType;
+	uint32 foreColor;
+	uint32 backColor;
+	int lineSize;
+	uint pattern;
+
+	Graphics::MacPlotData *pd;
 };
 
 // An extension of MacPlotData for interfacing with inks and patterns without
 // needing extra surfaces.
 struct DirectorPlotData {
-	Graphics::ManagedSurface *src;
+	Graphics::MacWindowManager *_wm;
 	Graphics::ManagedSurface *dst;
-	Graphics::MacPlotData *macPlot;
+
 	Common::Rect destRect;
 	Common::Point srcPoint;
 
+	Graphics::ManagedSurface *srf;
+	MacShape *ms;
+
+	SpriteType sprite;
 	InkType ink;
-	int numColors;
-	uint backColor;
+	uint32 colorWhite;
+	uint32 colorBlack;
+	int alpha;
 
-	Graphics::MacWindowManager *_wm;
+	uint32 backColor;
+	uint32 foreColor;
+	bool applyColor;
 
-	DirectorPlotData(Graphics::MacWindowManager *wm, Graphics::ManagedSurface *s, Graphics::ManagedSurface *d, InkType i, uint b, uint n) :
-		src(s), dst(d), ink(i), backColor(b), macPlot(nullptr), numColors(n), _wm(wm) {
+	void setApplyColor(); // graphics.cpp
+
+	DirectorPlotData(Graphics::MacWindowManager *w, SpriteType s, InkType i, int a, uint32 b, uint32 f) : _wm(w), sprite(s), ink(i), alpha(a), backColor(b), foreColor(f) {
+		srf = nullptr;
+		ms = nullptr;
+		dst = nullptr;
+		colorWhite = w->_colorWhite;
+		colorBlack = w->_colorBlack;
+		applyColor = false;
+	}
+
+	DirectorPlotData(const DirectorPlotData &old) : _wm(old._wm), sprite(old.sprite),
+	                                                ink(old.ink), alpha(old.alpha),
+	                                                backColor(old.backColor), foreColor(old.foreColor),
+	                                                srf(old.srf), dst(old.dst),
+	                                                destRect(old.destRect), srcPoint(old.srcPoint),
+	                                                colorWhite(old.colorWhite), colorBlack(old.colorBlack),
+	                                                applyColor(old.applyColor) {
+		if (old.ms) {
+			ms = new MacShape(*old.ms);
+		} else {
+			ms = nullptr;
+		}
+	}
+
+	DirectorPlotData &operator=(const DirectorPlotData &);
+
+	~DirectorPlotData() {
+		delete ms;
 	}
 };
-
-void inkDrawPixel(int x, int y, int color, void *data);
 
 class DirectorEngine : public ::Engine {
 public:
@@ -129,53 +188,71 @@ public:
 
 	DirectorGameGID getGameGID() const;
 	const char *getGameId() const;
-	uint16 getVersion() const;
+	uint16 getDescriptionVersion() const;
+	uint16 getVersion() const { return _version; }
+	void setVersion(uint16 version);
 	Common::Platform getPlatform() const;
 	Common::Language getLanguage() const;
+	const char *getExtra();
 	Common::String getEXEName() const;
+	StartMovie getStartMovie() const;
 	DirectorSound *getSoundManager() const { return _soundManager; }
 	Graphics::MacWindowManager *getMacWindowManager() const { return _wm; }
 	Archive *getMainArchive() const;
 	Lingo *getLingo() const { return _lingo; }
-	Stage *getStage() const { return _currentStage; }
+	Window *getStage() const { return _stage; }
+	Window *getCurrentWindow() const { return _currentWindow; }
+	void setCurrentWindow(Window *window) { _currentWindow = window; };
 	Movie *getCurrentMovie() const;
+	void setCurrentMovie(Movie *movie);
 	Common::String getCurrentPath() const;
-	void setPalette(int id);
-	void setPalette(byte *palette, uint16 count);
+
+	// graphics.cpp
 	bool hasFeature(EngineFeature f) const override;
-	void loadPalettes();
+
+	void addPalette(int id, byte *palette, int length);
+	bool setPalette(int id);
+	void setPalette(byte *palette, uint16 count);
+	void clearPalettes();
+	PaletteV4 *getPalette(int id);
+	void loadDefaultPalettes();
+
+	const Common::HashMap<int, PaletteV4> &getLoadedPalettes() { return _loadedPalettes; }
+
+	const Common::FSNode *getGameDataDir() const { return &_gameDataDir; }
 	const byte *getPalette() const { return _currentPalette; }
 	uint16 getPaletteColorCount() const { return _currentPaletteLength; }
+
 	void loadPatterns();
 	uint32 transformColor(uint32 color);
 	Graphics::MacPatterns &getPatterns();
-	void setCursor(int type); // graphics.cpp
+	void setCursor(int type);
+	void draw();
+
+	Graphics::MacDrawPixPtr getInkDrawPixel();
 
 	void loadKeyCodes();
 
 	Archive *createArchive();
 
 	// events.cpp
-	void processEvents(bool bufferLingoEvents = false);
-	void setDraggedSprite(uint16 id);
-	void releaseDraggedSprite();
+	void processEvents();
 	uint32 getMacTicks();
-	void waitForClick();
 
 public:
-	Common::RandomSource _rnd;
-	Graphics::ManagedSurface *_surface;
+	RandomState _rnd;
 	Graphics::MacWindowManager *_wm;
+	Graphics::PixelFormat _pixelformat;
 
 public:
 	int _colorDepth;
-	unsigned char _key;
-	int _keyCode;
 	Common::HashMap<int, int> _macKeyCodes;
 	int _machineType;
 	bool _playbackPaused;
 	bool _skipFrameAdvance;
+	bool _centerStage;
 
+	Common::HashMap<Common::String, Archive *, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> _openResFiles;
 	Common::String _sharedCastFile;
 
 protected:
@@ -183,22 +260,22 @@ protected:
 
 private:
 	const DirectorGameDescription *_gameDescription;
+	Common::FSNode _gameDataDir;
 
 	DirectorSound *_soundManager;
 	byte *_currentPalette;
 	uint16 _currentPaletteLength;
 	Lingo *_lingo;
+	uint16 _version;
 
-	Stage *_currentStage;
+	Window *_stage;
+	Datum *_windowList; // Lingo list
+	Window *_currentWindow;
 
 	Graphics::MacPatterns _director3Patterns;
 	Graphics::MacPatterns _director3QuickDrawPatterns;
 
-	Common::HashMap<int, PaletteV4 *> _director4Palettes;
-
-	bool _draggingSprite;
-	uint16 _draggingSpriteId;
-	Common::Point _draggingSpritePos;
+	Common::HashMap<int, PaletteV4> _loadedPalettes;
 };
 
 extern DirectorEngine *g_director;

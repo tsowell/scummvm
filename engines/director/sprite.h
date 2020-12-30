@@ -25,6 +25,7 @@
 
 namespace Director {
 
+class Frame;
 class BitmapCastMember;
 class ShapeCastMember;
 class TextCastMember;
@@ -58,17 +59,27 @@ enum MainChannelsPosition {
 
 class Sprite {
 public:
-	Sprite();
+	Sprite(Frame *frame);
 	~Sprite();
 
+	Frame *getFrame() const { return _frame; }
+	Score *getScore() const { return _score; }
+
 	void updateCast();
+
+	bool respondsToMouse();
 	bool isActive();
+	bool shouldHilite();
+
 	uint16 getPattern();
 	void setPattern(uint16 pattern);
 
 	void setCast(uint16 castid);
+	bool isQDShape();
 
-	Common::Rect getDims();
+	Frame *_frame;
+	Score *_score;
+	Movie *_movie;
 
 	uint16 _scriptId;
 	uint16 _scriptCastIndex;
@@ -77,14 +88,14 @@ public:
 	uint32 _unk3;
 
 	bool _enabled;
-	uint16 _castId;
 	uint16 _castIndex;
 	SpriteType _spriteType;
-	CastType _castType;
 	byte _inkData;
 	InkType _ink;
 	uint16 _trails;
 
+	uint16 _castId;
+	uint16 _pattern;
 	CastMember *_cast;
 
 	byte _thickness;
@@ -95,15 +106,11 @@ public:
 	bool _editable;
 	bool _puppet;
 	bool _immediate;
-	byte _backColor;
-	byte _foreColor;
+	uint32 _backColor;
+	uint32 _foreColor;
 
 	byte _blend;
-	// Using in digital movie sprites
-	byte _movieRate;
-	uint16 _movieTime;
-	uint16 _startTime;
-	uint16 _stopTime;
+
 	byte _volume;
 	byte _stretch;
 };

@@ -29,6 +29,8 @@
 namespace Ultima {
 namespace Ultima8 {
 
+class TextWidget;
+
 /**
  * Second box along the bottom of the screen, shows current ammo
  */
@@ -50,7 +52,8 @@ public:
 	void saveData(Common::WriteStream *ws) override;
 
 private:
-	const Shape *_ammoShape;
+	TextWidget *_bulletsText;
+	TextWidget *_clipsText;
 };
 
 } // End of namespace Ultima8

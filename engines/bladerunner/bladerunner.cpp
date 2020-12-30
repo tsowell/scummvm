@@ -232,6 +232,10 @@ BladeRunnerEngine::BladeRunnerEngine(OSystem *syst, const ADGameDescription *des
 
 	_actorUpdateCounter  = 0;
 	_actorUpdateTimeLast = 0;
+
+	_currentKeyDown.keycode = Common::KEYCODE_INVALID;
+	_keyRepeatTimeLast = 0;
+	_keyRepeatTimeDelay = 0;
 }
 
 BladeRunnerEngine::~BladeRunnerEngine() {
@@ -1284,6 +1288,7 @@ void BladeRunnerEngine::handleEvents() {
 		return;
 	}
 
+	uint32 timeNow = _time->currentSystem();
 	Common::Event event;
 	Common::EventManager *eventMan = _system->getEventManager();
 	while (eventMan->pollEvent(event)) {
@@ -1295,6 +1300,13 @@ void BladeRunnerEngine::handleEvents() {
 		case Common::EVENT_KEYDOWN:
 			// Process the actual key press only and filter out repeats
 			if (!event.kbdRepeat) {
+				// Only for Esc and Return keys, allow repeated firing emulation
+				// First hit (fire) has a bigger delay (kKeyRepeatInitialDelay) before repeated events are fired from the same key
+				if (event.kbd.keycode == Common::KEYCODE_ESCAPE || event.kbd.keycode == Common::KEYCODE_RETURN) {
+					_currentKeyDown = event.kbd.keycode;
+					_keyRepeatTimeLast = timeNow;
+					_keyRepeatTimeDelay = kKeyRepeatInitialDelay;
+				}
 				handleKeyDown(event);
 			}
 			break;
@@ -1331,9 +1343,25 @@ void BladeRunnerEngine::handleEvents() {
 			; // nothing to do
 		}
 	}
+
+	if ((_currentKeyDown == Common::KEYCODE_ESCAPE || _currentKeyDown == Common::KEYCODE_RETURN) && (timeNow - _keyRepeatTimeLast >= _keyRepeatTimeDelay)) {
+		// create a "new" keydown event
+		event.type = Common::EVENT_KEYDOWN;
+		// kbdRepeat field will be unused here since we emulate the kbd repeat behavior anyway, but it's good to set it for consistency
+		event.kbdRepeat = true;
+		event.kbd = _currentKeyDown;
+		_keyRepeatTimeLast = timeNow;
+		_keyRepeatTimeDelay = kKeyRepeatSustainDelay;
+		handleKeyDown(event);
+	}
 }
 
 void BladeRunnerEngine::handleKeyUp(Common::Event &event) {
+	if (event.kbd.keycode == _currentKeyDown.keycode) {
+		// Only stop firing events if it's the current key
+		_currentKeyDown.keycode = Common::KEYCODE_INVALID;
+	}
+
 	if (!playerHasControl() || _isWalkingInterruptible) {
 		return;
 	}

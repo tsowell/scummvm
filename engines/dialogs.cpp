@@ -205,11 +205,6 @@ void MainMenuDialog::reflowLayout() {
 void MainMenuDialog::save() {
 	int slot = _saveDialog->runModalWithCurrentTarget();
 
-	#if defined(__PLAYSTATION2__) && defined(DYNAMIC_MODULES)
-	char pokeme[32];
-	snprintf(pokeme,32,"hack");
-	#endif
-
 	if (slot >= 0) {
 		Common::String result(_saveDialog->getResultString());
 		if (result.empty()) {
@@ -239,9 +234,11 @@ void MainMenuDialog::load() {
 		close();
 }
 
+#ifdef GUI_ENABLE_KEYSDIALOG
 enum {
 	kKeysCmd = 'KEYS'
 };
+#endif
 
 namespace GUI {
 
@@ -378,24 +375,23 @@ void ConfigDialog::apply() {
 	OptionsDialog::apply();
 }
 
+#ifdef GUI_ENABLE_KEYSDIALOG
 void ConfigDialog::handleCommand(GUI::CommandSender *sender, uint32 cmd, uint32 data) {
 	switch (cmd) {
 	case kKeysCmd:
-
-#ifdef GUI_ENABLE_KEYSDIALOG
-	//
-	// Create the sub dialog(s)
-	//
-	_keysDialog = new GUI::KeysDialog();
-	_keysDialog->runModal();
-	delete _keysDialog;
-	_keysDialog = NULL;
-#endif
+		//
+		// Create the sub dialog(s)
+		//
+		_keysDialog = new GUI::KeysDialog();
+		_keysDialog->runModal();
+		delete _keysDialog;
+		_keysDialog = NULL;
 		break;
 	default:
 		GUI::OptionsDialog::handleCommand (sender, cmd, data);
 	}
 }
+#endif
 
 ExtraGuiOptionsWidget::ExtraGuiOptionsWidget(GuiObject *containerBoss, const Common::String &name, const Common::String &domain, const ExtraGuiOptions &options) :
 		OptionsContainerWidget(containerBoss, name, dialogLayout(domain), false, domain),

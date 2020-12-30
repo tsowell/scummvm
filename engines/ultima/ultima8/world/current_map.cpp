@@ -28,9 +28,10 @@
 #include "ultima/ultima8/world/egg.h"
 #include "ultima/ultima8/world/actors/actor.h"
 #include "ultima/ultima8/world/world.h"
-#include "ultima/ultima8/misc/rect.h"
+#include "ultima/ultima8/world/world_point.h"
 #include "ultima/ultima8/world/container.h"
 #include "ultima/ultima8/usecode/uc_list.h"
+#include "ultima/ultima8/usecode/uc_machine.h"
 #include "ultima/ultima8/graphics/shape_info.h"
 #include "ultima/ultima8/world/teleport_egg.h"
 #include "ultima/ultima8/world/egg_hatcher_process.h"
@@ -40,6 +41,8 @@
 #include "ultima/ultima8/ultima8.h"
 #include "ultima/ultima8/gumps/game_map_gump.h"
 #include "ultima/ultima8/misc/direction.h"
+#include "ultima/ultima8/misc/direction_util.h"
+#include "ultima/ultima8/misc/rect.h"
 #include "ultima/ultima8/world/get_object.h"
 
 namespace Ultima {
@@ -308,7 +311,7 @@ void CurrentMap::removeTargetItem(const Item *item) {
 }
 
 
-Item *CurrentMap::findBestTargetItem(int32 x, int32 y, uint8 dir) {
+Item *CurrentMap::findBestTargetItem(int32 x, int32 y, Direction dir, DirectionMode dirmode) {
 	// "best" means:
 	// Shape info SI_OCCL
 	// isNPC
@@ -335,7 +338,7 @@ Item *CurrentMap::findBestTargetItem(int32 x, int32 y, uint8 dir) {
 
 		int32 ix, iy, iz;
 		item->getLocation(ix, iy, iz);
-		Direction itemdir = Get_WorldDirection(iy - y, ix - x);
+		Direction itemdir = Direction_GetWorldDir(iy - y, ix - x, dirmode);
 		if (itemdir != dir)
 			continue;
 
@@ -409,8 +412,8 @@ static inline void CalcFastAreaLimits(int32 &sx_limit,
 	// By default the fastArea is the screensize plus a border of no more
 	// than 256 pixels wide and 384 pixels high
 	// dims.w and dims.h need to be divided by 2 for crusader
-	sx_limit = dims.w / 256 + 3;
-	sy_limit = dims.h / 128 + 7;
+	sx_limit = dims.width() / 256 + 3;
+	sy_limit = dims.height() / 128 + 7;
 	xy_limit = (sy_limit + sx_limit) / 2;
 }
 
@@ -428,10 +431,10 @@ void CurrentMap::updateFastArea(int32 from_x, int32 from_y, int32 from_z, int32 
 	Rect dims;
 	Ultima8Engine::get_instance()->getGameMapGump()->GetDims(dims);
 
-	int32 sleft  = ((x_min - y_min) / 4)         - (dims.w / 2 + _mapChunkSize / 4);
-	int32 stop   = ((x_min + y_min) / 8 - z_max) - (dims.h / 2 + _mapChunkSize / 8);
-	int32 sright = ((x_max - y_max) / 4)         + (dims.w / 2 + _mapChunkSize / 4);
-	int32 sbot   = ((x_max + y_max) / 8 - z_min) + (dims.h / 2 + _mapChunkSize / 8);
+	int32 sleft  = ((x_min - y_min) / 4)         - (dims.width() / 2 + _mapChunkSize / 4);
+	int32 stop   = ((x_min + y_min) / 8 - z_max) - (dims.height() / 2 + _mapChunkSize / 8);
+	int32 sright = ((x_max - y_max) / 4)         + (dims.width() / 2 + _mapChunkSize / 4);
+	int32 sbot   = ((x_max + y_max) / 8 - z_min) + (dims.height() / 2 + _mapChunkSize / 8);
 
 	// Don't do anything IF the regions are the same
 	if (_fastXMin == sleft && _fastYMin == stop &&
@@ -520,7 +523,7 @@ void CurrentMap::areaSearch(UCList *itemlist, const uint8 *loopscript,
 		check->getFootpadWorld(xd, yd, zd);
 	}
 
-	const Rect searchrange(x - xd - range, y - yd - range, 2 * range + xd, 2 * range + yd);
+	const Rect searchrange(x - xd - range, y - yd - range, x + range, y + range);
 
 	int minx = ((x - xd - range) / _mapChunkSize) - 1;
 	int maxx = ((x + range) / _mapChunkSize) + 1;
@@ -546,9 +549,9 @@ void CurrentMap::areaSearch(UCList *itemlist, const uint8 *loopscript,
 				int32 ixd, iyd, izd;
 				item->getFootpadWorld(ixd, iyd, izd);
 
-				const Rect itemrect(ix - ixd, iy - iyd, ixd, iyd);
+				const Rect itemrect(ix - ixd, iy - iyd, ix, iy);
 
-				if (!itemrect.Overlaps(searchrange))
+				if (!itemrect.intersects(searchrange))
 					continue;
 
 				// check item against loopscript
@@ -589,7 +592,7 @@ void CurrentMap::surfaceSearch(UCList *itemlist, const uint8 *loopscript,
                                int32 origin[3], int32 dims[3],
                                bool above, bool below, bool recurse) const {
 	const Rect searchrange(origin[0] - dims[0], origin[1] - dims[1],
-	                 dims[0], dims[1]);
+	                       origin[0], origin[1]);
 
 	int minx = ((origin[0] - dims[0]) / _mapChunkSize) - 1;
 	int maxx = ((origin[0]) / _mapChunkSize) + 1;
@@ -616,9 +619,9 @@ void CurrentMap::surfaceSearch(UCList *itemlist, const uint8 *loopscript,
 				int32 ixd, iyd, izd;
 				item->getFootpadWorld(ixd, iyd, izd);
 
-				const Rect itemrect(ix - ixd, iy - iyd, ixd, iyd);
+				const Rect itemrect(ix - ixd, iy - iyd, ix, iy);
 
-				if (!itemrect.Overlaps(searchrange))
+				if (!itemrect.intersects(searchrange))
 					continue;
 
 				bool ok = false;
@@ -681,7 +684,7 @@ const Std::list<Item *> *CurrentMap::getItemList(int32 gx, int32 gy) const {
 bool CurrentMap::isValidPosition(int32 x, int32 y, int32 z,
                                  uint32 shape,
                                  ObjId item, const Item **support,
-                                 ObjId *roof) const {
+                                 ObjId *roof, const Item **blocker) const {
 	const ShapeInfo *si = GameData::get_instance()->
 	                getMainShapes()->getShapeInfo(shape);
 	int32 xd, yd, zd;
@@ -691,18 +694,18 @@ bool CurrentMap::isValidPosition(int32 x, int32 y, int32 z,
 	return isValidPosition(x, y, z,
 	                       INT_MAX_VALUE / 2, INT_MAX_VALUE / 2, INT_MAX_VALUE / 2,
 	                       xd, yd, zd,
-	                       si->_flags, item, support, roof);
+	                       si->_flags, item, support, roof, blocker);
 }
 
 bool CurrentMap::isValidPosition(int32 x, int32 y, int32 z,
                                  int xd, int yd, int zd,
                                  uint32 shapeflags,
-                                 ObjId item_, const Item **support_,
-                                 ObjId *roof_) const {
+                                 ObjId item, const Item **support,
+                                 ObjId *roof, const Item **blocker) const {
 	return isValidPosition(x, y, z,
 	                       INT_MAX_VALUE / 2, INT_MAX_VALUE / 2, INT_MAX_VALUE / 2,
 	                       xd, yd, zd,
-	                       shapeflags, item_, support_, roof_);
+	                       shapeflags, item, support, roof, blocker);
 }
 
 
@@ -711,13 +714,14 @@ bool CurrentMap::isValidPosition(int32 x, int32 y, int32 z,
                                  int xd, int yd, int zd,
                                  uint32 shapeflags,
                                  ObjId item_, const Item **support_,
-                                 ObjId *roof_) const {
+                                 ObjId *roof_, const Item **blocker_) const {
 	const uint32 flagmask = (ShapeInfo::SI_SOLID | ShapeInfo::SI_DAMAGING |
 	                         ShapeInfo::SI_ROOF);
 	const uint32 blockflagmask = (ShapeInfo::SI_SOLID | ShapeInfo::SI_DAMAGING);
 
 	bool valid = true;
 	const Item *support = nullptr;
+	const Item *blocker = nullptr;
 	ObjId roof = 0;
 	int32 roofz = INT_MAX_VALUE;
 
@@ -738,7 +742,7 @@ bool CurrentMap::isValidPosition(int32 x, int32 y, int32 z,
 				if (item->hasExtFlags(Item::EXT_SPRITE))
 					continue;
 
-				ShapeInfo *si = item->getShapeInfo();
+				const ShapeInfo *si = item->getShapeInfo();
 				//!! need to check is_sea() and is_land() maybe?
 				if (!(si->_flags & flagmask))
 					continue; // not an interesting item
@@ -770,6 +774,9 @@ bool CurrentMap::isValidPosition(int32 x, int32 y, int32 z,
 #if 0
 					item->dumpInfo();
 #endif
+					if (blocker == nullptr) {
+						blocker = item;
+					}
 					valid = false;
 				}
 
@@ -794,6 +801,8 @@ bool CurrentMap::isValidPosition(int32 x, int32 y, int32 z,
 
 	if (support_)
 		*support_ = support;
+	if (blocker_)
+		*blocker_ = blocker;
 	if (roof_)
 		*roof_ = roof;
 
@@ -801,16 +810,16 @@ bool CurrentMap::isValidPosition(int32 x, int32 y, int32 z,
 }
 
 bool CurrentMap::scanForValidPosition(int32 x, int32 y, int32 z, const Item *item,
-                                      int movedir, bool wantsupport,
+                                      Direction movedir, bool wantsupport,
                                       int32 &tx, int32 &ty, int32 &tz) {
 	// TODO: clean this up. Currently the mask arrays are filled with more
 	// data than is actually used.
 	const uint32 blockflagmask = (ShapeInfo::SI_SOLID | ShapeInfo::SI_DAMAGING) & item->getShapeInfo()->_flags;
 
-	int searchdir = (movedir + 2) % 4;
+	Direction searchdir = static_cast<Direction>(((int)movedir + 2) % 4);
 
-	bool xdir = (x_fact[searchdir] != 0);
-	bool ydir = (y_fact[searchdir] != 0);
+	bool xdir = (Direction_XFactor(searchdir) != 0);
+	bool ydir = (Direction_YFactor(searchdir) != 0);
 
 	// mark everything as valid, but without support
 	uint32 validmask[17];
@@ -828,7 +837,6 @@ bool CurrentMap::scanForValidPosition(int32 x, int32 y, int32 z, const Item *ite
 	// the positive  x/y directions, with the exception of searchdir 1,
 	// in which case positive horiz points in the (positive x, negative y)
 	// direction.
-
 
 	// next, we'll loop over all objects in the area, and mark the areas
 	// overlapped and supported by each object
@@ -1275,20 +1283,28 @@ bool CurrentMap::load(Common::ReadStream *rs, uint32 version) {
 	return true;
 }
 
-uint32 CurrentMap::I_canExistAt(const uint8 *args, unsigned int /*argsize*/) {
+uint32 CurrentMap::I_canExistAt(const uint8 *args, unsigned int argsize) {
 	ARG_UINT16(shape);
 	ARG_UINT16(x);
 	ARG_UINT16(y);
 	ARG_UINT16(z);
-	//!! TODO: figure these out
-	ARG_UINT16(unk1); // is either 1 or 4
-	ARG_UINT16(unk2); // looks like it could be an objid
-	ARG_UINT16(unk3); // always zero
+	if (argsize > 8) {
+		//!! TODO: figure these out
+		ARG_UINT16(unk1); // is either 1 or 4
+		ARG_UINT16(unk2); // looks like it could be an objid
+		ARG_UINT16(unk3); // always zero
+	}
 
 	if (GAME_IS_CRUSADER) {
 		x *= 2;
 		y *= 2;
 	}
+
+	//
+	// TODO: The crusader version of this function actually checks by
+	// changing the shapeinfo of shape 0x31A to match the target
+	// shape.  For a first level approximation, this is the same.
+	//
 
 	const CurrentMap *cm = World::get_instance()->getCurrentMap();
 	bool valid = cm->isValidPosition(x, y, z, shape, 0, 0, 0);
@@ -1298,6 +1314,30 @@ uint32 CurrentMap::I_canExistAt(const uint8 *args, unsigned int /*argsize*/) {
 	else
 		return 0;
 }
+
+uint32 CurrentMap::I_canExistAtPoint(const uint8 *args, unsigned int /*argsize*/) {
+	ARG_UINT16(unk1);
+	ARG_UINT16(unk2);
+	ARG_UINT16(shape);
+	ARG_WORLDPOINT(pt);
+
+	if (shape > 0x800)
+		return 0;
+
+	if (GAME_IS_CRUSADER) {
+		pt.setX(pt.getX() * 2);
+		pt.setY(pt.getY() * 2);
+	}
+
+	const CurrentMap *cm = World::get_instance()->getCurrentMap();
+	bool valid = cm->isValidPosition(pt.getX(), pt.getY(), pt.getZ(), shape, 0, 0, 0);
+
+	if (valid)
+		return 1;
+	else
+		return 0;
+}
+
 
 } // End of namespace Ultima8
 } // End of namespace Ultima

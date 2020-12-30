@@ -27,6 +27,7 @@
 #include "ultima/ultima8/kernel/process.h"
 #include "ultima/ultima8/kernel/kernel.h"
 #include "ultima/ultima8/world/actors/teleport_to_egg_process.h"
+#include "ultima/ultima8/world/target_reticle_process.h"
 #include "ultima/ultima8/world/camera_process.h"
 #include "ultima/ultima8/world/actors/animation.h"
 #include "ultima/ultima8/ultima8.h"
@@ -35,14 +36,18 @@
 #include "ultima/ultima8/conf/setting_manager.h"
 #include "ultima/ultima8/kernel/core_app.h"
 #include "ultima/ultima8/games/game_data.h"
+#include "ultima/ultima8/graphics/anim_dat.h"
 #include "ultima/ultima8/graphics/wpn_ovlay_dat.h"
 #include "ultima/ultima8/graphics/shape_info.h"
+#include "ultima/ultima8/gumps/cru_pickup_area_gump.h"
 #include "ultima/ultima8/audio/audio_process.h"
 #include "ultima/ultima8/world/world.h"
 #include "ultima/ultima8/world/get_object.h"
 #include "ultima/ultima8/usecode/uc_list.h"
 #include "ultima/ultima8/usecode/uc_machine.h"
 #include "ultima/ultima8/world/loop_script.h"
+#include "ultima/ultima8/world/fire_type.h"
+#include "ultima/ultima8/world/sprite_process.h"
 #include "ultima/ultima8/world/actors/avatar_gravity_process.h"
 #include "ultima/ultima8/audio/music_process.h"
 
@@ -54,7 +59,7 @@ DEFINE_RUNTIME_CLASSTYPE_CODE(MainActor)
 
 MainActor::MainActor() : _justTeleported(false), _accumStr(0), _accumDex(0),
 	_accumInt(0), _cruBatteryType(ChemicalBattery), _keycards(0),
-	_activeWeapon(0), _activeInvItem(0) {
+	_activeInvItem(0), _shieldType(0), _shieldSpriteProc(0) {
 }
 
 MainActor::~MainActor() {
@@ -130,6 +135,9 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 	int32 x, y, z;
 	getLocation(x, y, z);
 
+	CruPickupAreaGump *pickupArea = CruPickupAreaGump::get_instance();
+	assert(pickupArea);
+
 	if (shapeno == 0x4ed) {
 		Item *credits = getFirstItemWithShape(shapeno, true);
 		if (credits) {
@@ -139,18 +147,16 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 				newq = 64000;
 			credits->setQuality(newq);
 			credits->callUsecodeEvent_combine();
-			if (showtoast) {
-				warning("TODO: show toast for added credits %d", q);
-			}
+			if (showtoast)
+				pickupArea->addPickup(item);
 			item->destroy();
 		} else {
 			item->setFrame(0);
 			item->moveToContainer(this);
 			if (!_activeInvItem)
 				_activeInvItem = item->getObjId();
-			if (showtoast) {
-				warning("TODO: show toast for new credits %d", item->getQuality());
-			}
+			if (showtoast)
+				pickupArea->addPickup(item);
 		}
 		return 1;
 	}
@@ -173,9 +179,8 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 			item->moveToContainer(this);
 			if (!_activeWeapon)
 				_activeWeapon = item->getObjId();
-			warning("TODO: Set new weapon as active weapon if there is none");
 			if (showtoast)
-				warning("TODO: Show toast for new weapon %d", shapeno);
+				pickupArea->addPickup(item);
 		}
 		break;
 	}
@@ -187,7 +192,7 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 			item->callUsecodeEvent_combine();
 			item->moveToContainer(this);
 			if (showtoast)
-				warning("TODO: Show toast for new ammo %d", shapeno);
+				pickupArea->addPickup(item);
 			return 1;
 		} else {
 			// already have this, add some ammo.
@@ -196,7 +201,7 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 				ammo->setQuality(q + 1);
 				ammo->callUsecodeEvent_combine();
 				if (showtoast)
-					warning("TODO: Show toast for combined ammo %d (%d)", shapeno, q + 1);
+					pickupArea->addPickup(item);
 				item->destroy();
 				return 1;
 			}
@@ -208,15 +213,14 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 		if (shapeno == 0x111) {
 			addKeycard(item->getQuality() & 0xff);
 			if (showtoast) {
-				warning("TODO: show toast for added keycard %d", item->getQuality() & 0xff);
+				pickupArea->addPickup(item);
 			}
 			item->destroy();
 			return 1;
 		} else if ((shapeno == 0x3a2) || (shapeno == 0x3a3) || (shapeno == 0x3a4)) {
 			// Batteries
-			if (showtoast) {
-				warning("TODO: show toast for added battery %d", shapeno);
-			}
+			if (showtoast)
+				pickupArea->addPickup(item);
 			item->destroy();
 			int plusenergy = 0;
 			CruBatteryType oldbattery = _cruBatteryType;
@@ -256,11 +260,9 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 					item->setFrame(0);
 					item->setQuality(1);
 					item->callUsecodeEvent_combine();
-					bool added = item->moveToContainer(this);
-					if (showtoast) {
-						warning("TODO: show toast new item %d (%s)",
-								shapeno, added ? "added" : "failed");
-					}
+					item->moveToContainer(this);
+					if (showtoast)
+						pickupArea->addPickup(item);
 					if (!_activeInvItem)
 						_activeInvItem = item->getObjId();
 					return 1;
@@ -276,9 +278,8 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 					if (q < 0x14) {
 						existing->setQuality(q + 1);
 						existing->callUsecodeEvent_combine();
-						if (showtoast) {
-							warning("TODO: show toast for combined cru spider q=%d", q + 1);
-						}
+						if (showtoast)
+							pickupArea->addPickup(item);
 						item->destroy();
 						return 1;
 					}
@@ -287,9 +288,8 @@ int16 MainActor::addItemCru(Item *item, bool showtoast) {
 					if (q < 10) {
 						existing->setQuality(q + 1);
 						existing->callUsecodeEvent_combine();
-						if (showtoast) {
-							warning("TODO: show toast for combined other item %d q=%d", shapeno, q + 1);
-						}
+						if (showtoast)
+							pickupArea->addPickup(item);
 						item->destroy();
 						return 1;
 					}
@@ -364,7 +364,7 @@ uint16 MainActor::getDefenseType() const {
 	Std::list<Item *>::const_iterator iter;
 	for (iter = _contents.begin(); iter != _contents.end(); ++iter) {
 		uint32 frameNum = (*iter)->getFrame();
-		ShapeInfo *si = (*iter)->getShapeInfo();
+		const ShapeInfo *si = (*iter)->getShapeInfo();
 		if (si->_armourInfo) {
 			type |= si->_armourInfo[frameNum]._defenseType;
 		}
@@ -379,7 +379,7 @@ uint32 MainActor::getArmourClass() const {
 	Std::list<Item *>::const_iterator iter;
 	for (iter = _contents.begin(); iter != _contents.end(); ++iter) {
 		uint32 frameNum = (*iter)->getFrame();
-		ShapeInfo *si = (*iter)->getShapeInfo();
+		const ShapeInfo *si = (*iter)->getShapeInfo();
 		if (si->_armourInfo) {
 			armour += si->_armourInfo[frameNum]._armourClass;
 		}
@@ -396,7 +396,7 @@ int16 MainActor::getDefendingDex() const {
 
 	Item *weapon = getItem(getEquip(ShapeInfo::SE_WEAPON));
 	if (weapon) {
-		ShapeInfo *si = weapon->getShapeInfo();
+		const ShapeInfo *si = weapon->getShapeInfo();
 		assert(si->_weaponInfo);
 		dex += si->_weaponInfo->_dexDefendBonus;
 	}
@@ -411,7 +411,7 @@ int16 MainActor::getAttackingDex() const {
 
 	Item *weapon = getItem(getEquip(ShapeInfo::SE_WEAPON));
 	if (weapon) {
-		ShapeInfo *si = weapon->getShapeInfo();
+		const ShapeInfo *si = weapon->getShapeInfo();
 		assert(si->_weaponInfo);
 		dex += si->_weaponInfo->_dexAttackBonus;
 	}
@@ -443,7 +443,7 @@ int MainActor::getDamageAmount() const {
 		int kick_bonus = 0;
 		Item *legs = getItem(getEquip(ShapeInfo::SE_LEGS));
 		if (legs) {
-			ShapeInfo *si = legs->getShapeInfo();
+			const ShapeInfo *si = legs->getShapeInfo();
 			assert(si->_armourInfo);
 			kick_bonus = si->_armourInfo[legs->getFrame()]._kickAttackBonus;
 		}
@@ -460,7 +460,7 @@ int MainActor::getDamageAmount() const {
 	if (weapon) {
 		// weapon equipped?
 
-		ShapeInfo *si = weapon->getShapeInfo();
+		const ShapeInfo *si = weapon->getShapeInfo();
 		assert(si->_weaponInfo);
 
 		int base = si->_weaponInfo->_baseDamage;
@@ -480,12 +480,14 @@ int MainActor::getDamageAmount() const {
 
 void MainActor::setInCombat() {
 	setActorFlag(ACT_INCOMBAT);
-	MusicProcess::get_instance()->playCombatMusic(98); // CONSTANT!
+	if (GAME_IS_U8)
+		MusicProcess::get_instance()->playCombatMusic(98); // CONSTANT!
 }
 
 void MainActor::clearInCombat() {
 	clearActorFlag(ACT_INCOMBAT);
-	MusicProcess::get_instance()->restoreMusic();
+	if (GAME_IS_U8)
+		MusicProcess::get_instance()->restoreMusic();
 }
 
 ProcId MainActor::die(uint16 damageType) {
@@ -510,10 +512,15 @@ ProcId MainActor::die(uint16 damageType) {
 	deathproc->waitFor(delayproc);
 
 	MusicProcess *music = MusicProcess::get_instance();
-	if (music) {
+	if (GAME_IS_U8 && music) {
 		music->unqueueMusic();
 		music->playCombatMusic(44); // CONSTANT!!
-	};
+	}
+
+	if (GAME_IS_CRUSADER) {
+		// Force a reticle update
+		TargetReticleProcess::get_instance()->avatarMoved();
+	}
 
 	return animprocid;
 }
@@ -566,11 +573,18 @@ void MainActor::getWeaponOverlay(const WeaponOverlayFrame *&frame_, uint32 &shap
 
 	if (!isInCombat() && _lastAnim != Animation::unreadyWeapon) return;
 
-	ObjId weaponid = getEquip(ShapeInfo::SE_WEAPON);
+	uint32 action = AnimDat::getActionNumberForSequence(_lastAnim, this);
+
+	ObjId weaponid;
+	if (GAME_IS_U8)
+		weaponid = getEquip(ShapeInfo::SE_WEAPON);
+	else
+		weaponid = getActiveWeapon();
+
 	Item *weapon = getItem(weaponid);
 	if (!weapon) return;
 
-	ShapeInfo *shapeinfo = weapon->getShapeInfo();
+	const ShapeInfo *shapeinfo = weapon->getShapeInfo();
 	if (!shapeinfo) return;
 
 	WeaponInfo *weaponinfo = shapeinfo->_weaponInfo;
@@ -579,7 +593,7 @@ void MainActor::getWeaponOverlay(const WeaponOverlayFrame *&frame_, uint32 &shap
 	shape_ = weaponinfo->_overlayShape;
 
 	WpnOvlayDat *wpnovlay = GameData::get_instance()->getWeaponOverlay();
-	frame_ = wpnovlay->getOverlayFrame(_lastAnim, weaponinfo->_overlayType,
+	frame_ = wpnovlay->getOverlayFrame(action, weaponinfo->_overlayType,
 	                                  _direction, _animFrame);
 
 	if (frame_ == 0) shape_ = 0;
@@ -613,8 +627,10 @@ void MainActor::addKeycard(int bitno) {
 
 static uint16 getIdOfNextItemInList(const Std::vector<Item *> &items, uint16 current) {
 	const int n = items.size();
-	if (n <= 1)
-		return current;
+	if (n == 0)
+		return 0;
+	if (n == 1)
+		return items[0]->getObjId();
 
 	int i;
 	for (i = 0; i < n; i++) {
@@ -650,8 +666,9 @@ void MainActor::saveData(Common::WriteStream *ws) {
 	if (GAME_IS_CRUSADER) {
 		ws->writeByte(static_cast<byte>(_cruBatteryType));
 		ws->writeUint32LE(_keycards);
-		ws->writeUint16LE(_activeWeapon);
 		ws->writeUint16LE(_activeInvItem);
+		ws->writeUint16LE(_shieldType);
+		ws->writeUint16LE(_shieldSpriteProc);
 	}
 
 	uint8 namelength = static_cast<uint8>(_name.size());
@@ -672,8 +689,9 @@ bool MainActor::loadData(Common::ReadStream *rs, uint32 version) {
 	if (GAME_IS_CRUSADER) {
 		_cruBatteryType = static_cast<CruBatteryType>(rs->readByte());
 		_keycards = rs->readUint32LE();
-		_activeWeapon = rs->readUint16LE();
 		_activeInvItem = rs->readUint16LE();
+		_shieldType = rs->readUint16LE();
+		_shieldSpriteProc = rs->readUint16LE();
 	}
 
 	uint8 namelength = rs->readByte();
@@ -686,19 +704,19 @@ bool MainActor::loadData(Common::ReadStream *rs, uint32 version) {
 
 uint32 MainActor::I_teleportToEgg(const uint8 *args, unsigned int argsize) {
 	uint16 mapnum;
-	if (argsize == 12) {
+	if (argsize == 6) {
 		ARG_UINT16(map);
 		mapnum = map;
 	} else {
-		// TODO: Confirm this works right.
-		// Crusader teleport uses main actor map.
-		assert(argsize == 8);
+		// Crusader teleport intrinsic 096 uses main actor map.
+		// Intrinsic 079 provides a map argument.
+		assert(argsize == 4);
 		MainActor *av = getMainActor();
 		mapnum = av->getMapNum();
 	}
 
 	ARG_UINT16(teleport_id);
-	ARG_UINT16(unknown); // 0/1
+	ARG_UINT16(put_in_stasis); // 0/1
 
 	return Kernel::get_instance()->addProcess(
 	           new TeleportToEggProcess(mapnum, teleport_id));
@@ -799,15 +817,117 @@ uint32 MainActor::I_addItemCru(const uint8 *args,
 	return 0;
 }
 
+uint32 MainActor::I_getNumberOfCredits(const uint8 *args,
+unsigned int /*argsize*/) {
+	MainActor *av = getMainActor();
+	if (av) {
+		Item *item = av->getFirstItemWithShape(0x4ed, true);
+		if (item)
+			return item->getQuality();
+	}
+	return 0;
+}
+
 void MainActor::useInventoryItem(uint32 shapenum) {
+	Item *item = getFirstItemWithShape(shapenum, true);
+	useInventoryItem(item);
+}
+
+void MainActor::useInventoryItem(Item *item) {
+	if (!item)
+		return;
 	if (Ultima8Engine::get_instance()->isAvatarInStasis()) {
 		pout << "Can't use item: avatarInStasis" << Std::endl;
 		return;
 	}
-	Item *item = this->getFirstItemWithShape(shapenum, true);
-	if (item)
-		item->callUsecodeEvent_use();
+	const int32 shapenum = item->getShape();
+	if (shapenum == 0x4ed && GAME_IS_CRUSADER) {
+		// Do nothing for Credits
+		return;
+	}
+	item->callUsecodeEvent_use();
+
+	if (GAME_IS_CRUSADER && (shapenum != 0x4d4 && shapenum != 0x52d &&
+							 shapenum != 0x530 && shapenum != 0x52f &&
+							 shapenum != 0x52e)) {
+		uint16 q = item->getQuality();
+		item->setQuality(q - 1);
+		item->callUsecodeEvent_combine();
+		q = item->getQuality();
+		if (q == 0) {
+			const ObjId id = item->getObjId();
+			item->destroy();
+			if (id == _activeInvItem)
+				nextInvItem();
+		}
+	}
 }
+
+int MainActor::receiveShieldHit(int damage, uint16 damage_type) {
+	uint8 shieldtype = getShieldType();
+	if (shieldtype == 3) {
+		shieldtype = 4;
+	}
+
+	const FireType *firetype = GameData::get_instance()->getFireType(damage_type);
+	int energy = getMana();
+	Kernel *kernel = Kernel::get_instance();
+
+	if (shieldtype && firetype && firetype->getShieldCost() && (firetype->getShieldMask() & shieldtype) && damage < energy) {
+		setMana(energy - damage);
+		damage = 0;
+		AudioProcess *audio = AudioProcess::get_instance();
+		audio->playSFX(0x48, 0x10, _objId, 1, true);
+
+		// If there's no active shield sprite, create a new one.
+		if (!_shieldSpriteProc || kernel->getProcess(_shieldSpriteProc) == nullptr) {
+			// Create the shield damage sprite
+			uint16 shieldsprite;
+			uint16 shieldstartframe;
+			uint16 shieldendframe;
+			bool remembersprite;
+			int32 x, y, z;
+
+			switch (shieldtype) {
+			case 1:
+				shieldsprite = 0x5a9;
+				shieldstartframe = 7;
+				shieldendframe = 0xd;
+				remembersprite = false;
+				// NOTE: In the game, this is put in the location of the
+				// hit.  For now just put in centre.
+				getCentre(x, y, z);
+				break;
+			case 2:
+				shieldsprite = 0x5a9;
+				shieldstartframe = 0;
+				shieldendframe = 6;
+				remembersprite = false;
+				getCentre(x, y, z);
+				break;
+			default:
+				shieldsprite = 0x52b;
+				shieldstartframe = 0;
+				shieldendframe = 8;
+				getLocation(x, y, z);
+				x += 0x10;
+				y += 0x18;
+				remembersprite = true;
+				break;
+			}
+			Process *p = new SpriteProcess(shieldsprite, shieldstartframe,
+										   shieldendframe, 1, 4, x, y, z);
+			kernel->addProcess(p);
+			if (remembersprite) {
+				_shieldSpriteProc = p->getPid();
+			} else {
+				_shieldSpriteProc = 0;
+			}
+		}
+	}
+	return damage;
+}
+
 
 } // End of namespace Ultima8
 } // End of namespace Ultima

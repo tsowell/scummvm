@@ -77,6 +77,18 @@ bool OSystem_iOS7::pollEvent(Common::Event &event) {
 			handleEvent_applicationResumed();
 			return false;
 
+		case kInputApplicationSaveState:
+			handleEvent_applicationSaveState();
+			return false;
+
+		case kInputApplicationRestoreState:
+			handleEvent_applicationRestoreState();
+			return false;
+
+		case kInputApplicationClearState:
+			handleEvent_applicationClearState();
+			return false;
+
 		case kInputMouseSecondDragged:
 			if (!handleEvent_mouseSecondDragged(event, internalEvent.value1, internalEvent.value2))
 				return false;

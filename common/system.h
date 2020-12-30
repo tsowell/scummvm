@@ -149,7 +149,7 @@ protected:
 
 	/**
 	 * No default value is provided for _eventManager by OSystem.
-	 * However, BaseBackend::initBackend() does set a default value
+	 * However, EventsBaseBackend::initBackend() does set a default value
 	 * if none has been set before.
 	 *
 	 * @note _eventManager is deleted by the OSystem destructor.
@@ -242,6 +242,11 @@ public:
 	 * Destoy this OSystem instance.
 	 */
 	void destroy();
+
+	/**
+	 * The following method should be called once, after g_system is created.
+	 */
+	virtual void init() {}
 
 	/**
 	 * The following method is called once, from main.cpp, after all

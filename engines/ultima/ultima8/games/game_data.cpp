@@ -31,6 +31,7 @@
 #include "ultima/ultima8/graphics/fonts/font_shape_archive.h"
 #include "ultima/ultima8/graphics/gump_shape_archive.h"
 #include "ultima/ultima8/world/map_glob.h"
+#include "ultima/ultima8/world/fire_type_table.h"
 #include "ultima/ultima8/world/actors/npc_dat.h"
 #include "ultima/ultima8/world/actors/combat_dat.h"
 #include "ultima/ultima8/graphics/palette_manager.h"
@@ -203,7 +204,7 @@ FrameID GameData::translate(FrameID f) {
 	istring key = "language/";
 	switch (f._flexId) {
 	case GUMPS:
-		key += "_gumps/";
+		key += "gumps/";
 		break;
 	default:
 		return f;
@@ -503,6 +504,10 @@ const CombatDat *GameData::getCombatDat(uint16 entry) const {
 	return nullptr;
 }
 
+const FireType *GameData::getFireType(uint16 type) const {
+	return FireTypeTable::get(type);
+}
+
 void GameData::loadRemorseData() {
 	FileSystem *filesystem = FileSystem::get_instance();
 
@@ -539,9 +544,9 @@ void GameData::loadRemorseData() {
 	                                  &CrusaderShapeFormat);
 
 	ConfigFileManager *config = ConfigFileManager::get_instance();
-#if 0
 	// Load weapon, armour info
-	config->readConfigFile("@data/u8weapons.ini", "weapons", true);
+	config->readConfigFile("@data/remorseweapons.ini", "weapons", true);
+#if 0
 	config->readConfigFile("@data/u8armour.ini", "armour", true);
 	config->readConfigFile("@data/u8monsters.ini", "monsters", true);
 #endif
@@ -633,11 +638,10 @@ void GameData::loadRemorseData() {
 		error("Unable to load static/damage.flx");
 
 	RawArchive *damageflex = new RawArchive(damageds);
+	if (damageflex->getCount() != 1)
+		error("static/damage.flx appears corrupted");
 
-	// TODO: What's in this flex file?
-	// 1 object of 12288 bytes, mostly 0s
-	//_damage = new DamageDat();
-	//_damage->load(damageflex);
+	_mainShapes->loadDamageDat(damageflex->get_datasource(0));
 
 	delete damageflex;
 
@@ -656,14 +660,6 @@ void GameData::loadRemorseData() {
 		}
 		delete combatflexrs;
 	}
-	// TODO: What's in this flex file?  Descriptions of combat tactics?
-	// 14 objects with contents:
-	// [ 16 Byte Name ]
-	// [ 4 * 16 bit numbers, alway 44, xx, 77, 78 ]
-	// [ 20 bytes of 0s ]
-	// [ variable number of bytes of data ]
-	//_combat = new CombatDat();
-	//_combat->load(combatflex);
 
 	delete combatflex;
 

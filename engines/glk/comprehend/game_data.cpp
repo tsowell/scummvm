@@ -143,7 +143,7 @@ void GameHeader::clear() {
 	addr_strings = 0;
 	addr_strings_end = 0;
 
-	Common::fill(&addr_actions[0], &addr_actions[8], 0);
+	Common::fill(&addr_actions[0], &addr_actions[7], 0);
 	Common::fill(&room_direction_table[0], &room_direction_table[NR_DIRECTIONS], 0);
 }
 
@@ -558,13 +558,8 @@ void GameData::parse_header(FileBuffer *fb) {
 	*
 	* Layout depends on the comprehend version.
 	*/
-	if (_comprehendVersion == 1) {
-		for (int idx = 0; idx < 7; ++idx)
-			parse_header_le16(fb, &header->addr_actions[idx]);
-	}
-	if (_comprehendVersion >= 2) {
-		error("TODO: loading action tables offsets");
-	}
+	for (int idx = 0; idx < (_comprehendVersion == 1 ? 7 : 5); ++idx)
+		parse_header_le16(fb, &header->addr_actions[idx]);
 
 	parse_header_le16(fb, &header->addr_vm);
 	parse_header_le16(fb, &header->addr_dictionary);

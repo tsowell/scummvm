@@ -22,6 +22,8 @@
 
 #include "common/file.h"
 #include "common/keyboard.h"
+#include "common/memstream.h"
+#include "common/zlib.h"
 
 #include "director/director.h"
 #include "director/util.h"
@@ -244,7 +246,7 @@ Common::String convertPath(Common::String &path) {
 	if (path.empty())
 		return path;
 
-	if (!path.contains(':')) {
+	if (!path.contains(':') && !path.contains('/') && !path.contains('\\')) {
 		return path;
 	}
 
@@ -252,10 +254,10 @@ Common::String convertPath(Common::String &path) {
 	uint32 idx = 0;
 
 	if (path.hasPrefix("::")) {
-		res = "../";
+		res = "..\\";
 		idx = 2;
 	} else {
-		res = "./";
+		res = ".\\";
 
 		if (path[0] == ':')
 			idx = 1;
@@ -263,13 +265,36 @@ Common::String convertPath(Common::String &path) {
 
 	while (idx != path.size()) {
 		if (path[idx] == ':')
-			res += '/';
+			res += '\\';
+		else if (path[idx] == '/')
+			res += ':';
 		else
 			res += path[idx];
 
 		idx++;
 	}
 
+	// And now convert everything to Unix style paths
+	Common::String res1;
+	for (idx = 0; idx < res.size(); idx++)
+		if (res[idx] == '\\')
+			res1 += '/';
+		else
+			res1 += res[idx];
+
+	return res1;
+}
+
+Common::String unixToMacPath(const Common::String &path) {
+	Common::String res;
+	for (uint32 idx = 0; idx < path.size(); idx++) {
+		if (path[idx] == ':')
+			res += '/';
+		else if (path[idx] == '/')
+			res += ':';
+		else
+			res += path[idx];
+	}
 	return res;
 }
 
@@ -282,37 +307,58 @@ Common::String getPath(Common::String path, Common::String cwd) {
 	return cwd; // The path is not altered
 }
 
-Common::String pathMakeRelative(Common::String path, bool recursive, bool addexts) {
+bool testPath(Common::String &path, bool directory) {
+	if (directory) {
+		// TOOD: This directory-searching branch only works for one level from the
+		// current directory, but it fixes current game loading issues.
+		if (path.contains('/'))
+			return false;
+
+		Common::FSNode d = Common::FSNode(*g_director->getGameDataDir()).getChild(path);
+		return d.exists();
+	}
+
+	Common::File f;
+	if (f.open(path)) {
+		if (f.size())
+			return true;
+		f.close();
+	}
+	return false;
+}
+
+Common::String pathMakeRelative(Common::String path, bool recursive, bool addexts, bool directory) {
 	Common::String initialPath(path);
 
-	// First, convert Windows-style separators
-	if (g_director->getPlatform() == Common::kPlatformWindows) {
-		if (initialPath.contains('\\'))
-			for (uint i = 0; i < initialPath.size(); i++)
-				if (initialPath[i] == '\\')
-					initialPath.setChar('/', i);
-	}
+	if (testPath(initialPath, directory))
+		return initialPath;
+
+	if (recursive) // first level
+		initialPath = convertPath(initialPath);
 
 	debug(2, "pathMakeRelative(): s1 %s -> %s", path.c_str(), initialPath.c_str());
 
-	initialPath = Common::normalizePath(g_director->getCurrentPath() + convertPath(initialPath), '/');
-	Common::File f;
+	initialPath = Common::normalizePath(g_director->getCurrentPath() + initialPath, '/');
 	Common::String convPath = initialPath;
 
 	debug(2, "pathMakeRelative(): s2 %s", convPath.c_str());
 
-	if (f.open(initialPath))
+	// Strip the leading whitespace from the path
+	initialPath.trim();
+
+	if (testPath(initialPath, directory))
 		return initialPath;
 
 	// Now try to search the file
 	bool opened = false;
+
 	while (convPath.contains('/')) {
 		int pos = convPath.find('/');
 		convPath = Common::String(&convPath.c_str()[pos + 1]);
 
 		debug(2, "pathMakeRelative(): s3 try %s", convPath.c_str());
 
-		if (!f.open(convPath))
+		if (!testPath(convPath, directory))
 			continue;
 
 		debug(2, "pathMakeRelative(): s3 converted %s -> %s", path.c_str(), convPath.c_str());
@@ -328,7 +374,7 @@ Common::String pathMakeRelative(Common::String path, bool recursive, bool addext
 
 		debug(2, "pathMakeRelative(): s4 %s", convPath.c_str());
 
-		if (f.open(initialPath))
+		if (testPath(initialPath, directory))
 			return initialPath;
 
 		// Now try to search the file
@@ -338,7 +384,7 @@ Common::String pathMakeRelative(Common::String path, bool recursive, bool addext
 
 			debug(2, "pathMakeRelative(): s5 try %s", convPath.c_str());
 
-			if (!f.open(convPath))
+			if (!testPath(convPath, directory))
 				continue;
 
 			debug(2, "pathMakeRelative(): s5 converted %s -> %s", path.c_str(), convPath.c_str());
@@ -349,10 +395,12 @@ Common::String pathMakeRelative(Common::String path, bool recursive, bool addext
 		}
 	}
 
-	if (!opened && recursive) {
+	if (!opened && recursive && !directory) {
 		// Hmmm. We couldn't find the path as is.
 		// Let's try to translate file path into 8.3 format
-		if (g_director->getPlatform() == Common::kPlatformWindows && g_director->getVersion() < 5) {
+		Common::String addedexts;
+
+		if (g_director->getPlatform() == Common::kPlatformWindows && g_director->getVersion() < 500) {
 			convPath.clear();
 			const char *ptr = initialPath.c_str();
 			Common::String component;
@@ -374,32 +422,47 @@ Common::String pathMakeRelative(Common::String path, bool recursive, bool addext
 				ptr++;
 			}
 
-			Common::String convname = convertMacFilename(component.c_str());
-			debug(2, "pathMakeRelative(): s6 %s -> %s%s", initialPath.c_str(), convPath.c_str(), convname.c_str());
-
-			const char *exts[] = { ".MMM", ".DIR", ".DXR", 0 };
-			for (int i = 0; exts[i] && addexts; ++i) {
-				Common::String newpath = convPath + convname + exts[i];
-
-				debug(2, "pathMakeRelative(): s6 try %s", newpath.c_str());
-
-				Common::String res = pathMakeRelative(newpath, false, false);
-
-				if (f.open(res))
-					return res;
-			}
+			if (addexts)
+				addedexts = testExtensions(component, initialPath, convPath);
+		} else {
+			if (addexts)
+				addedexts = testExtensions(initialPath, initialPath, convPath);
 		}
 
+		if (!addedexts.empty()) {
+			return addedexts;
+		}
 
 		return initialPath;	// Anyway nothing good is happening
 	}
-
-	f.close();
 
 	if (opened)
 		return convPath;
 	else
 		return initialPath;
+}
+
+Common::String testExtensions(Common::String component, Common::String initialPath, Common::String convPath) {
+	const char *exts[] = { ".MMM", ".DIR", ".DXR", 0 };
+	for (int i = 0; exts[i]; ++i) {
+		Common::String newpath = convPath + (strcmp(exts[i], ".MMM") == 0 ?  convertMacFilename(component.c_str()) : component.c_str()) + exts[i];
+
+		debug(2, "pathMakeRelative(): s6 %s -> try %s", initialPath.c_str(), newpath.c_str());
+		Common::String res = pathMakeRelative(newpath, false, false);
+
+		if (testPath(res))
+			return res;
+	}
+
+	return Common::String();
+}
+
+Common::String getFileName(Common::String path) {
+	while (path.contains('/')) {
+		int pos = path.find('/');
+		path = Common::String(&path.c_str()[pos + 1]);
+	}
+	return path;
 }
 
 //////////////////
@@ -526,8 +589,8 @@ Common::String dumpScriptName(const char *prefix, int type, int id, const char *
 	case kCastScript:
 		typeName = "cast";
 		break;
-	case kGlobalScript:
-		typeName = "global";
+	case kEventScript:
+		typeName = "event";
 		break;
 	case kScoreScript:
 		typeName = "score";
@@ -537,5 +600,94 @@ Common::String dumpScriptName(const char *prefix, int type, int id, const char *
 	return Common::String::format("./dumps/%s-%s-%d.%s", prefix, typeName.c_str(), id, ext);
 }
 
+void RandomState::setSeed(int seed) {
+	init(32);
+
+	_seed = seed ? seed : 1;
+}
+
+int32 RandomState::getRandom(int32 range) {
+	int32 res;
+
+	if (_seed == 0)
+		init(32);
+
+	res = perlin(genNextRandom() * 71);
+
+	if (range > 0)
+		res = ((res & 0x7fffffff) % range);
+
+	return res;
+}
+
+static const uint32 masks[31] = {
+	0x00000003, 0x00000006, 0x0000000c, 0x00000014, 0x00000030, 0x00000060, 0x000000b8, 0x00000110,
+	0x00000240, 0x00000500, 0x00000ca0, 0x00001b00, 0x00003500, 0x00006000, 0x0000b400, 0x00012000,
+	0x00020400, 0x00072000, 0x00090000, 0x00140000, 0x00300000, 0x00400000, 0x00d80000, 0x01200000,
+	0x03880000, 0x07200000, 0x09000000, 0x14000000, 0x32800000, 0x48000000, 0xa3000000
+};
+
+void RandomState::init(int len) {
+	if (len < 2 || len > 32) {
+		len = 32;
+		_len = (uint32)-1; // Since we cannot shift 32 bits
+	} else {
+		_len = (1 << len) - 1;
+	}
+
+	_seed = 1;
+	_mask = masks[len - 2];
+}
+
+int32 RandomState::genNextRandom() {
+	if (_seed & 1)
+		_seed = (_seed >> 1) ^ _mask;
+	else
+		_seed >>= 1;
+
+	return _seed;
+}
+
+int32 RandomState::perlin(int32 val) {
+	int32 res;
+
+	val = ((val << 13) ^ val) - (val >> 21);
+
+	res = (val * (val * val * 15731 + 789221) + 1376312589) & 0x7fffffff;
+	res += val;
+	res = ((res << 13) ^ res) - (res >> 21);
+
+	return res;
+}
+
+uint32 readVarInt(Common::SeekableReadStream &stream) {
+	// Shockwave variable-length integer
+	uint32 val = 0;
+	byte b;
+	do {
+		b = stream.readByte();
+		val = (val << 7) | (b & 0x7f); // The 7 least significant bits are appended to the result
+	} while (b >> 7); // If the most significant bit is 1, there's another byte after
+	return val;
+}
+
+Common::SeekableReadStreamEndian *readZlibData(Common::SeekableReadStream &stream, unsigned long len, unsigned long *outLen, bool bigEndian) {
+#ifdef USE_ZLIB
+	byte *in = (byte *)malloc(len);
+	byte *out = (byte *)malloc(*outLen);
+	stream.read(in, len);
+
+	if (!Common::uncompress(out, outLen, in, len)) {
+		free(in);
+		free(out);
+		return nullptr;
+	}
+
+	free(in);
+	return new Common::MemoryReadStreamEndian(out, *outLen, bigEndian, DisposeAfterUse::YES);
+# else
+	return nullptr;
+# endif
+}
 
 } // End of namespace Director

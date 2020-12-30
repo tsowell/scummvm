@@ -394,14 +394,23 @@ void initGraphics(int width, int height) {
 	initGraphics(width, height, &format);
 }
 
-void GUIErrorMessage(const Common::String &msg) {
+void GUIErrorMessageWithURL(const Common::String &msg, const char *url) {
+	GUIErrorMessage(msg, url);
+}
+
+void GUIErrorMessage(const Common::String &msg, const char *url) {
 	g_system->setWindowCaption("Error");
 	g_system->beginGFXTransaction();
 		initCommonGFX();
 		g_system->initSize(320, 200);
 	if (g_system->endGFXTransaction() == OSystem::kTransactionSuccess) {
-		GUI::MessageDialog dialog(msg);
-		dialog.runModal();
+		if (url) {
+			GUI::MessageDialogWithURL dialog(msg, url);
+			dialog.runModal();
+		} else {
+			GUI::MessageDialog dialog(msg);
+			dialog.runModal();
+		}
 	} else {
 		error("%s", msg.c_str());
 	}
@@ -572,7 +581,14 @@ void Engine::openMainMenuDialog() {
 
 	setGameToLoadSlot(-1);
 
+	bool hasVKeyb = g_system->getFeatureState(OSystem::kFeatureVirtualKeyboard);
+	if (hasVKeyb)
+		g_system->setFeatureState(OSystem::kFeatureVirtualKeyboard, false);
+
 	runDialog(*_mainMenuDialog);
+
+	if (hasVKeyb)
+		g_system->setFeatureState(OSystem::kFeatureVirtualKeyboard, true);
 
 	// Load savegame after main menu execution
 	// (not from inside the menu loop to avoid
